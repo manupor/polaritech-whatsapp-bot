@@ -145,6 +145,118 @@ class WhatsAppClient:
             logger.exception("outbound_image  to=%s  status=exception", to)
             return SendResult(success=False, error=str(exc))
 
+    async def send_interactive_buttons(
+        self,
+        to: str,
+        *,
+        body: str,
+        buttons: list[Dict[str, str]],
+        header: str = "",
+        footer: str = "",
+    ) -> SendResult:
+        """Send an interactive reply-buttons message (max 3 buttons).  Never raises."""
+        if not self._access_token:
+            logger.warning("WHATSAPP_ACCESS_TOKEN not set — skipping interactive send to %s", to)
+            return SendResult(success=False, error="access_token not configured")
+
+        payload = self._build_interactive_buttons_payload(
+            to, body=body, buttons=buttons, header=header, footer=footer,
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.post(
+                    self._api_url,
+                    headers=self._headers(),
+                    json=payload,
+                )
+
+            if resp.status_code == 200:
+                data = resp.json()
+                msg_id = ""
+                messages = data.get("messages", [])
+                if messages:
+                    msg_id = messages[0].get("id", "")
+                logger.info(
+                    "outbound_interactive  to=%s  status=ok  wa_message_id=%s",
+                    to, msg_id,
+                )
+                return SendResult(success=True, status_code=200, message_id=msg_id)
+
+            error_text = resp.text[:300]
+            logger.error(
+                "outbound_interactive  to=%s  status=error  http=%d  body=%s",
+                to, resp.status_code, error_text,
+            )
+            return SendResult(
+                success=False, status_code=resp.status_code, error=error_text,
+            )
+
+        except httpx.TimeoutException:
+            logger.error("outbound_interactive  to=%s  status=timeout", to)
+            return SendResult(success=False, error="timeout")
+
+        except Exception as exc:
+            logger.exception("outbound_interactive  to=%s  status=exception", to)
+            return SendResult(success=False, error=str(exc))
+
+    async def send_interactive_list(
+        self,
+        to: str,
+        *,
+        body: str,
+        button_text: str,
+        sections: list[Dict[str, Any]],
+        header: str = "",
+        footer: str = "",
+    ) -> SendResult:
+        """Send an interactive list message (up to 10 items).  Never raises."""
+        if not self._access_token:
+            logger.warning("WHATSAPP_ACCESS_TOKEN not set — skipping list send to %s", to)
+            return SendResult(success=False, error="access_token not configured")
+
+        payload = self._build_interactive_list_payload(
+            to, body=body, button_text=button_text, sections=sections,
+            header=header, footer=footer,
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.post(
+                    self._api_url,
+                    headers=self._headers(),
+                    json=payload,
+                )
+
+            if resp.status_code == 200:
+                data = resp.json()
+                msg_id = ""
+                messages = data.get("messages", [])
+                if messages:
+                    msg_id = messages[0].get("id", "")
+                logger.info(
+                    "outbound_list  to=%s  status=ok  wa_message_id=%s",
+                    to, msg_id,
+                )
+                return SendResult(success=True, status_code=200, message_id=msg_id)
+
+            error_text = resp.text[:300]
+            logger.error(
+                "outbound_list  to=%s  status=error  http=%d  body=%s",
+                to, resp.status_code, error_text,
+            )
+            return SendResult(
+                success=False, status_code=resp.status_code, error=error_text,
+            )
+
+        except httpx.TimeoutException:
+            logger.error("outbound_list  to=%s  status=timeout", to)
+            return SendResult(success=False, error="timeout")
+
+        except Exception as exc:
+            logger.exception("outbound_list  to=%s  status=exception", to)
+            return SendResult(success=False, error=str(exc))
+
     # ── Internals ────────────────────────────────────────────────────────
 
     def _headers(self) -> Dict[str, str]:
@@ -184,6 +296,71 @@ class WhatsAppClient:
             "to": to,
             "type": "image",
             "image": image_obj,
+        }
+
+    @staticmethod
+    def _build_interactive_buttons_payload(
+        to: str,
+        *,
+        body: str,
+        buttons: list[Dict[str, str]],
+        header: str = "",
+        footer: str = "",
+    ) -> Dict[str, Any]:
+        action_buttons = []
+        for btn in buttons[:3]:
+            action_buttons.append({
+                "type": "reply",
+                "reply": {
+                    "id": btn["id"],
+                    "title": btn["title"][:20],
+                },
+            })
+        interactive: Dict[str, Any] = {
+            "type": "button",
+            "body": {"text": body},
+            "action": {"buttons": action_buttons},
+        }
+        if header:
+            interactive["header"] = {"type": "text", "text": header}
+        if footer:
+            interactive["footer"] = {"text": footer}
+        return {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "interactive",
+            "interactive": interactive,
+        }
+
+    @staticmethod
+    def _build_interactive_list_payload(
+        to: str,
+        *,
+        body: str,
+        button_text: str,
+        sections: list[Dict[str, Any]],
+        header: str = "",
+        footer: str = "",
+    ) -> Dict[str, Any]:
+        interactive: Dict[str, Any] = {
+            "type": "list",
+            "body": {"text": body},
+            "action": {
+                "button": button_text[:20],
+                "sections": sections,
+            },
+        }
+        if header:
+            interactive["header"] = {"type": "text", "text": header}
+        if footer:
+            interactive["footer"] = {"text": footer}
+        return {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "interactive",
+            "interactive": interactive,
         }
 
 

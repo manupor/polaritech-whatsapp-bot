@@ -79,6 +79,7 @@ def test_new_contact_gets_welcome(mock_welcome_wa, mock_webhook_wa, mock_setting
 
     mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id="wmid_txt"))
     mock_welcome_wa.send_image = AsyncMock(return_value=AsyncMock(message_id="wmid_img"))
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id="wmid_menu"))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id="wmid_reply"))
 
     resp = client.post("/webhook", json=_text_payload(sender="50688077777"))
@@ -145,6 +146,7 @@ def test_old_conversation_gets_welcome_again(mock_welcome_wa, mock_webhook_wa, m
 
     mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_welcome_wa.send_image = AsyncMock()
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     phone = "50688055555"
@@ -184,6 +186,7 @@ def test_duplicate_webhook_no_duplicate_welcome(mock_welcome_wa, mock_webhook_wa
 
     mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_welcome_wa.send_image = AsyncMock()
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     payload = _text_payload(sender="50688044444", msg_id="wamid.dedup_welcome")
@@ -210,6 +213,7 @@ def test_missing_image_config_text_only(mock_welcome_wa, mock_webhook_wa, mock_s
 
     mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_welcome_wa.send_image = AsyncMock()
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     resp = client.post("/webhook", json=_text_payload(sender="50688033333", msg_id="wamid.noimg001"))

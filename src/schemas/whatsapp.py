@@ -47,6 +47,26 @@ class WhatsAppDocument(BaseModel):
     caption: Optional[str] = None
 
 
+class WhatsAppButtonReply(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = ""
+    title: str = ""
+
+
+class WhatsAppListReply(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = ""
+    title: str = ""
+    description: str = ""
+
+
+class WhatsAppInteractive(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    type: str = ""  # "button_reply" or "list_reply"
+    button_reply: Optional[WhatsAppButtonReply] = None
+    list_reply: Optional[WhatsAppListReply] = None
+
+
 # ── Message ──────────────────────────────────────────────────────────────────
 
 class WhatsAppMessage(BaseModel):
@@ -58,6 +78,7 @@ class WhatsAppMessage(BaseModel):
     text: Optional[WhatsAppText] = None
     image: Optional[WhatsAppImage] = None
     document: Optional[WhatsAppDocument] = None
+    interactive: Optional[WhatsAppInteractive] = None
 
 
 # ── Statuses ─────────────────────────────────────────────────────────────────

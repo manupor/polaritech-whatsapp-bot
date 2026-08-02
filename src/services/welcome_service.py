@@ -26,6 +26,21 @@ WELCOME_TEXT = (
     "A continuación le compartiré la información necesaria para preparar su cotización."
 )
 
+MENU_BODY = (
+    "👋 ¡Bienvenido a Polaritech Window Film!\n"
+    "Somos especialistas en películas arquitectónicas para control solar, "
+    "privacidad, seguridad y decoración de vidrio.\n\n"
+    "¿En qué le puedo ayudar?"
+)
+
+MENU_BUTTONS = [
+    {"id": "menu_productos", "title": "Info de productos"},
+    {"id": "menu_cotizacion", "title": "Cotización"},
+    {"id": "menu_visita", "title": "Agendar visita"},
+]
+
+MENU_FOOTER = "O escriba asesor para hablar con un miembro del equipo."
+
 
 async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") -> bool:
     """
@@ -51,6 +66,15 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
 
     # 2. Send image (if configured)
     await _send_welcome_image(phone_number)
+
+    # 3. Send interactive menu with buttons
+    menu_result = await whatsapp_client.send_interactive_buttons(
+        phone_number,
+        body=MENU_BODY,
+        buttons=MENU_BUTTONS,
+        footer=MENU_FOOTER,
+    )
+    _persist_menu(phone_number, menu_result)
 
     return True
 
@@ -125,3 +149,24 @@ def _persist_welcome_image(phone_number: str, result: SendResult) -> None:
             db.close()
     except Exception:
         logger.exception("persist_welcome_image failed for %s", phone_number)
+
+
+def _persist_menu(phone_number: str, result: SendResult) -> None:
+    """Log the outbound interactive menu."""
+    try:
+        db = get_db()
+        try:
+            repo.log_message(
+                db,
+                direction="outbound",
+                phone_number=phone_number,
+                message_type="interactive",
+                text="[welcome menu buttons]",
+                wa_message_id=result.message_id or None,
+                intent="welcome",
+            )
+            db.commit()
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("persist_welcome_menu failed for %s", phone_number)

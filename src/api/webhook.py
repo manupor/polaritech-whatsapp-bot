@@ -111,6 +111,51 @@ async def _process_message(
         return
     idempotency_store.mark_seen(msg_id)
 
+    # ── Interactive replies (button/list taps) ───────────────────────
+    if wa_msg.type == "interactive" and wa_msg.interactive:
+        reply_text = ""
+        reply_id = ""
+        if wa_msg.interactive.button_reply:
+            reply_text = wa_msg.interactive.button_reply.title
+            reply_id = wa_msg.interactive.button_reply.id
+        elif wa_msg.interactive.list_reply:
+            reply_text = wa_msg.interactive.list_reply.title
+            reply_id = wa_msg.interactive.list_reply.id
+
+        logger.info(
+            "inbound_interactive  msg_id=%s  sender=%s  reply_id=%s  title=%s",
+            msg_id, sender, reply_id, reply_text,
+        )
+
+        # Map button IDs to natural language text for the pipeline
+        button_text_map = {
+            "menu_productos": "Información de productos",
+            "menu_cotizacion": "Quiero solicitar una cotización",
+            "menu_visita": "Necesito una visita técnica",
+        }
+        text_for_pipeline = button_text_map.get(reply_id, reply_text)
+
+        incoming = IncomingMessage(
+            phone_number=sender,
+            sender_name=sender_name,
+            message_id=msg_id,
+            text=text_for_pipeline,
+            timestamp=wa_msg.timestamp,
+        )
+
+        persist_inbound(incoming, wa_message_id=msg_id)
+
+        if _is_human_takeover(sender):
+            logger.info("bot_paused  msg_id=%s  sender=%s  reason=human_takeover", msg_id, sender)
+            return
+
+        bot_response = handle_message(incoming)
+        result = await whatsapp_client.send_text(
+            bot_response.phone_number, bot_response.reply_text,
+        )
+        persist_outbound(bot_response, wa_message_id=result.message_id or None)
+        return
+
     # ── Text messages — main pipeline ────────────────────────────────
     if wa_msg.type == "text" and wa_msg.text:
         logger.info(

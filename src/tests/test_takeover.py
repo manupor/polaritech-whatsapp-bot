@@ -87,6 +87,7 @@ def test_bot_paused_when_human_takeover(mock_welcome_wa, mock_webhook_wa):
     """When human_takeover=true, bot should NOT send a response."""
     mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_welcome_wa.send_image = AsyncMock()
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     phone = "50688088001"
@@ -109,6 +110,7 @@ def test_bot_responds_when_not_takeover(mock_welcome_wa, mock_webhook_wa):
     """When human_takeover=false, bot responds normally."""
     mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_welcome_wa.send_image = AsyncMock()
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     phone = "50688088002"
