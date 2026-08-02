@@ -232,71 +232,115 @@ def _has_quote_semantics(text: str) -> bool:
     return False
 
 
+def _has_explicit_flow_change(text: str) -> Optional[Intent]:
+    """Detect if user explicitly requests to change flow.
+    Returns the target Intent if detected, None otherwise.
+    Only triggers on explicit, unambiguous flow change requests."""
+    t = normalize_text(text)
+    
+    # Product info requests - only explicit requests for catalog/info
+    product_phrases = [
+        "info de productos", "informacion de productos",
+        "catalogo", "catalogo",
+        "que productos tienen", "que ofrecen", "informacion sobre productos"
+    ]
+    # Don't trigger on just "laminas" or "pelicula" as these can be quote data
+    if any(phrase in t for phrase in product_phrases):
+        return Intent.PRODUCT_INFO
+    
+    # Quote requests - only explicit quote/cotizar requests
+    quote_phrases = [
+        "cotizacion", "cotizar", "presupuesto"
+    ]
+    # Don't trigger on "precio" or "costo" alone as these can be quote questions
+    if any(phrase in t for phrase in quote_phrases):
+        return Intent.QUOTE_REQUEST
+    
+    # Visit requests - only explicit visit requests
+    visit_phrases = [
+        "visita tecnica", "visita técnica", "agendar visita", "programar visita",
+        "necesito visita", "quiero visita"
+    ]
+    if any(phrase in t for phrase in visit_phrases):
+        return Intent.TECHNICAL_VISIT
+    
+    return None
+
+
+def _split_compound_message(text: str) -> List[str]:
+    """Split compound messages by common delimiters."""
+    delimiters = ["/", "-", "•", ";", "\n"]
+    parts = [text]
+    
+    for delim in delimiters:
+        new_parts = []
+        for part in parts:
+            new_parts.extend(part.split(delim))
+        parts = new_parts
+    
+    # Also split by " y " for Spanish
+    final_parts = []
+    for part in parts:
+        final_parts.extend(part.split(" y "))
+    
+    return [p.strip() for p in final_parts if p.strip()]
+
+
 def _extract_fields_from_text(text: str) -> Dict[str, str]:
-    """Best-effort extraction of quote/warranty/visit fields from free text."""
+    """Best-effort extraction of quote/warranty/visit fields from free text.
+    Handles compound messages by splitting and extracting from each part."""
     t = text.lower()
     fields: dict = {}
-
-    # Province - handle "San José, Curridabat" and "Curridabat, San José" patterns
-    for prov in _PROVINCES:
-        if prov in t:
-            fields["provincia"] = prov.title()
-            break
-
-    # Zone / neighbourhood - more flexible patterns
-    # Try patterns: "en <place>", "zona de <place>", "de <place>", ", <place>"
-    zone_match = re.search(r"(?:en|zona\s+de?|de|,)\s+([A-ZÁÉÍÓÚa-záéíóúñ]{3,}(?:\s+[A-ZÁÉÍÓÚa-záéíóúñ]+)*)", text)
-    if zone_match:
-        zone_candidate = zone_match.group(1).strip()
-        # Don't capture if it's just a province name without context
-        if zone_candidate.lower() not in {p.lower() for p in _PROVINCES}:
-            fields["zona"] = zone_candidate
-    else:
-        # Fallback: numbered lists like "1- privacidad 2- San José"
-        numbered_items = re.findall(r"(?:\d+[\.\-]\s*)([A-ZÁÉÍÓÚa-záéíóúñ\s]+)", text)
-        for item in numbered_items:
-            item_clean = item.strip()
-            item_lower = item_clean.lower()
-            # Skip if already captured as need
-            if any(k in item_lower for k in ["privacidad", "calor", "seguridad", "decoración"]):
-                continue
-            # If it's a place name (3+ chars), capture as zone
-            # Even if it's a province name (San José can be both province and zone)
-            if len(item_clean) >= 3 and item_clean not in fields.values():
-                fields["zona"] = item_clean
+    
+    # Split compound message and extract from each part
+    parts = _split_compound_message(text)
+    
+    for part in parts:
+        part_lower = part.lower()
+        
+        # Province
+        for prov in _PROVINCES:
+            if prov in part_lower and "provincia" not in fields:
+                fields["provincia"] = prov.title()
                 break
-
+        
+        # Zone / neighbourhood
+        zone_match = re.search(r"(?:en|zona\s+de?|de|,)\s+([A-ZÁÉÍÓÚa-záéíóúñ]{3,}(?:\s+[A-ZÁÉÍÓÚa-záéíóúñ]+)*)", part)
+        if zone_match:
+            zone_candidate = zone_match.group(1).strip()
+            if zone_candidate.lower() not in {p.lower() for p in _PROVINCES} and "zona" not in fields:
+                fields["zona"] = zone_candidate
+        
+        # Number of windows / measurements
+        ventanas_match = re.search(r"(\d+)\s*ventanas?", part_lower)
+        if ventanas_match and "medidas" not in fields:
+            fields["medidas"] = f"{ventanas_match.group(1)} ventanas (pendiente medidas exactas)"
+        
+        m2_match = re.search(r"(\d+(?:[.,]\d+)?)\s*m[²2]", part_lower)
+        if m2_match and "medidas" not in fields:
+            fields["medidas"] = f"{m2_match.group(1)} m²"
+        
+        dim_match = re.search(r"(\d+(?:[.,]\d+)?)\s*[x×X]\s*(\d+(?:[.,]\d+)?)", part_lower)
+        if dim_match and "medidas" not in fields:
+            fields["medidas"] = f"{dim_match.group(1)} × {dim_match.group(2)}"
+        
+        # Need
+        needs_map = {
+            "calor": "control solar / calor",
+            "privacidad": "privacidad",
+            "seguridad": "seguridad",
+            "decoración": "decoración",
+            "decoracion": "decoración",
+        }
+        for keyword, label in needs_map.items():
+            if keyword in part_lower and "necesidad" not in fields:
+                fields["necesidad"] = label
+                break
+    
     # If no zone found but province is mentioned, use province as zone
-    # (flexible for Costa Rica where San José is both province and cantón)
     if "zona" not in fields and "provincia" in fields:
         fields["zona"] = fields["provincia"]
-
-    # Number of windows / measurements
-    ventanas_match = re.search(r"(\d+)\s*ventanas?", t)
-    if ventanas_match:
-        fields["medidas"] = f"{ventanas_match.group(1)} ventanas (pendiente medidas exactas)"
-
-    m2_match = re.search(r"(\d+(?:[.,]\d+)?)\s*m[²2]", t)
-    if m2_match:
-        fields["medidas"] = f"{m2_match.group(1)} m²"
-
-    dim_match = re.search(r"(\d+(?:[.,]\d+)?)\s*[x×X]\s*(\d+(?:[.,]\d+)?)", t)
-    if dim_match:
-        fields["medidas"] = f"{dim_match.group(1)} × {dim_match.group(2)}"
-
-    # Need
-    needs_map = {
-        "calor": "control solar / calor",
-        "privacidad": "privacidad",
-        "seguridad": "seguridad",
-        "decoración": "decoración",
-        "decoracion": "decoración",
-    }
-    for keyword, label in needs_map.items():
-        if keyword in t:
-            fields["necesidad"] = label
-            break
-
+    
     return fields
 
 
@@ -822,6 +866,22 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
             phone, button_id,
         )
         return _handle_button_click(phone, button_id)
+    
+    # Priority 3.75: Check for explicit flow change requests (bypass active flow)
+    flow_change_intent = _has_explicit_flow_change(text)
+    if flow_change_intent:
+        logger.info(
+            "explicit_flow_change  phone=%s  from_flow=%s  to_intent=%s",
+            phone, current_flow.flow_type or 'idle', flow_change_intent.value,
+        )
+        # Clear current flow and handle the new intent
+        conversation_store.clear_flow(phone)
+        if flow_change_intent == Intent.PRODUCT_INFO:
+            return _handle_product_info(phone, text)
+        elif flow_change_intent == Intent.QUOTE_REQUEST:
+            return _handle_quote(phone, text)
+        elif flow_change_intent == Intent.TECHNICAL_VISIT:
+            return _handle_technical_visit(phone, text)
     
     # Priority 4: Active flow data collection
     if current_flow.flow_type == "quote":
