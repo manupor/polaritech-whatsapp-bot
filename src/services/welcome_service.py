@@ -26,12 +26,7 @@ WELCOME_TEXT = (
     "A continuación le compartiré la información necesaria para preparar su cotización."
 )
 
-MENU_BODY = (
-    "👋 ¡Bienvenido a Polaritech Window Film!\n"
-    "Somos especialistas en películas arquitectónicas para control solar, "
-    "privacidad, seguridad y decoración de vidrio.\n\n"
-    "¿En qué le puedo ayudar?"
-)
+MENU_BODY = "¿En qué le puedo ayudar?"
 
 MENU_BUTTONS = [
     {"id": "menu_productos", "title": "Info de productos"},

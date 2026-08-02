@@ -63,6 +63,8 @@ INTENT_KEYWORDS: Dict[Intent, List[str]] = {
         "película", "pelicula", "lámina", "lamina",
         "ceramic", "tint", "film", "uv",
         "calor", "privacidad", "heat", "privacy",
+        "producto", "productos", "catálogo", "catalogo",
+        "info de productos", "información de productos",
     ],
     Intent.WARRANTY_CLAIM: [
         "reclamo", "defecto", "se despegó", "se despego",
@@ -140,9 +142,7 @@ FIELD_LABELS: Dict[str, str] = {
 
 TEMPLATES: Dict[str, str] = {
     "greeting": (
-        "👋 ¡Bienvenido a Polaritech Window Film!\n"
-        "Somos especialistas en películas arquitectónicas para control solar, "
-        "privacidad, seguridad y decoración de vidrio.\n\n"
+        "Le saluda Valentina, asistente virtual de Polaritech. 😊\n\n"
         "¿En qué le puedo ayudar?\n"
         "• Información de productos\n"
         "• Cotización\n"
@@ -150,7 +150,7 @@ TEMPLATES: Dict[str, str] = {
         "O escriba *asesor* para hablar con un miembro del equipo."
     ),
     "unknown": (
-        "No estoy seguro de haber entendido. Puedo ayudarle con:\n"
+        "Disculpe, no estoy segura de haber entendido. Puedo ayudarle con:\n"
         "• Información sobre películas (Nano Cerámica, Económica, Silver Espejo, "
         "Seguridad, Sand Blasting)\n"
         "• Cotizaciones\n"
@@ -260,18 +260,20 @@ TEMPLATES: Dict[str, str] = {
         "• Cortinas o persianas como complemento"
     ),
     "product_catalog": (
-        "En Polaritech trabajamos con las siguientes líneas de películas arquitectónicas:\n\n"
-        "☀️ *Nano Cerámica* — Alto rendimiento térmico, privacidad de día, "
-        "excelente visibilidad hacia el exterior.\n\n"
-        "💰 *Económica* — Control solar básico a un precio accesible. "
-        "Reducción moderada de calor y privacidad durante el día.\n\n"
-        "🪞 *Silver Espejo* — Efecto espejo en el exterior, privacidad de día "
-        "y estilo moderno.\n\n"
-        "🛡️ *Seguridad* — Refuerza el vidrio, mantiene fragmentos unidos ante impacto. "
-        "Lámina transparente de 4 micras.\n\n"
-        "🔲 *Sand Blasting (Esmerilado)* — Privacidad total en ambos sentidos "
-        "sin perder entrada de luz. Acabado decorativo.\n\n"
-        "¿Sobre cuál le gustaría más información? O si prefiere, "
-        "puedo ayudarle a elegir según su necesidad (calor, privacidad, seguridad, decoración)."
+        "En Polaritech trabajamos las siguientes líneas de películas arquitectónicas:\n\n"
+        "☀️ *Nano Cerámica (IRR98)* — Línea premium 100% nanocerámica, sin metal. "
+        "Hasta 98% de rechazo infrarrojo y 99.5% de protección UV, sin efecto espejo "
+        "y sin interferir Wi‑Fi. Disponible en 70%, 45%, 20% y 10%. Garantía 12 años.\n\n"
+        "💰 *Económica (IRR65)* — Control solar con reducción moderada de calor y "
+        "privacidad de día, enfocada en costo-beneficio. Garantía 5 años.\n\n"
+        "🪞 *Silver Espejo* — Película reflectiva: efecto espejo de día, alta privacidad "
+        "diurna y reducción de deslumbramiento.\n\n"
+        "🛡️ *Película de Seguridad* — Refuerza el vidrio y ayuda a mantener unidos los "
+        "fragmentos en caso de rotura.\n\n"
+        "🔲 *Sand Blasting* — Acabado tipo vidrio esmerilado: privacidad permanente en "
+        "ambos sentidos permitiendo el paso de luz natural.\n\n"
+        "⬛ *White Out / Black Out* — Para bloqueo visual total o superficies opacas.\n\n"
+        "¿Sobre cuál desea más detalle? También puedo recomendarle según su necesidad "
+        "principal: calor, privacidad, seguridad o decoración."
     ),
 }

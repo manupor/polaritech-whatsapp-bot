@@ -291,7 +291,7 @@ def _msg(text: str, phone: str = "+1") -> IncomingMessage:
 def test_menu_greeting():
     resp = handle_message(_msg("Hola buenas tardes"))
     assert resp.intent.value == "greeting"
-    assert "Polaritech Window Film" in resp.reply_text
+    assert "Valentina" in resp.reply_text
 
 
 def test_menu_option_1_cotizacion():
