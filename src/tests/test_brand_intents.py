@@ -10,8 +10,9 @@ def test_brand_general_que_marcas_with_sign():
     """Test general brand question with question mark sign."""
     answer = find_answer("¿Qué marcas trabajan?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
-    assert "Polaritech trabaja con tecnologías seleccionadas" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
     # Ensure it does NOT return the price comparison response
     assert "barato" not in answer.lower()
     assert "es posible que encuentre" not in answer.lower()
@@ -21,7 +22,8 @@ def test_brand_3m_exact():
     """Test exact 3M question returns brand_3m answer."""
     answer = find_answer("¿Trabajan con 3M?")
     assert answer is not None
-    assert "Actualmente no" in answer
+    # Should start with "Actualmente no trabajamos con 3M"
+    assert answer.startswith("Actualmente no trabajamos con 3M")
     assert "Polaritech trabaja con tecnologías seleccionadas" in answer
 
 
@@ -57,57 +59,72 @@ def test_brand_general_que_marcas():
     """Test general brand question returns brand_general answer."""
     answer = find_answer("¿Qué marcas trabajan?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
-    assert "Polaritech trabaja con tecnologías seleccionadas" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_con_cual_marca():
     """Test general brand question with 'con cual marca' variant."""
     answer = find_answer("¿Con cuál marca trabajan?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_cuales_marcas():
     """Test general brand question with 'cuales marcas' variant."""
     answer = find_answer("¿Cuáles marcas manejan?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_que_marca_usan():
     """Test general brand question with 'que marca usan' variant."""
     answer = find_answer("¿Qué marca usan?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_manejan_alguna():
     """Test general brand question with 'manejan alguna' variant."""
     answer = find_answer("¿Manejan alguna marca específica?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_trabajan_alguna():
     """Test general brand question with 'trabajan con alguna' variant."""
     answer = find_answer("¿Trabajan con alguna marca?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_usan_alguna():
     """Test general brand question with 'usan alguna' variant."""
     answer = find_answer("¿Usan alguna marca?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_marca_laminas():
     """Test general brand question with 'marca de las laminas' variant."""
     answer = find_answer("¿Cuál es la marca de las láminas?")
     assert answer is not None
-    assert "Actualmente no trabajamos con 3M" in answer
+    # Should start with "Polaritech trabaja con tecnologías..." (NOT "Actualmente no")
+    assert answer.startswith("Polaritech trabaja con tecnologías seleccionadas")
+    assert "Si me indica si busca calor" in answer
 
 
 def test_brand_general_includes_orientation():

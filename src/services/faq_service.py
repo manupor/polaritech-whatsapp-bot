@@ -76,7 +76,7 @@ CANONICAL_INTENTS = {
 BRAND_INTENTS = {
     "brand_3m": {
         "aliases": ["trabajan con 3m", "usan 3m", "tienen 3m", "manejan 3m", "ofrecen 3m"],
-        "answer": "Actualmente no. Polaritech trabaja con tecnologías seleccionadas por su equilibrio entre desempeño, calidad y costo."
+        "answer": "Actualmente no trabajamos con 3M. Polaritech trabaja con tecnologías seleccionadas por su equilibrio entre desempeño, calidad y costo."
     },
     "brand_general": {
         "aliases": [
@@ -91,7 +91,7 @@ BRAND_INTENTS = {
             "que marcas manejan",
             "cual marca usan",
         ],
-        "answer": "Actualmente no trabajamos con 3M. Polaritech trabaja con tecnologías seleccionadas por su equilibrio entre desempeño, calidad y costo. Si desea, puedo orientarle según su necesidad: calor, privacidad, seguridad o decoración."
+        "answer": "Polaritech trabaja con tecnologías seleccionadas por su equilibrio entre desempeño, calidad y costo. Si me indica si busca calor, privacidad, seguridad o decoración, puedo orientarle con la línea más adecuada."
     },
     "competitor_cheaper_3m": {
         "aliases": ["me ofrecieron 3m mas barato", "otra empresa me ofrece 3m mas barato", "3m mas barato"],
