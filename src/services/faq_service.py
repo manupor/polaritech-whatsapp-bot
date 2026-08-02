@@ -72,6 +72,56 @@ CANONICAL_INTENTS = {
     "vidrio temperado": 35,  # FAQ id 35
 }
 
+# Brand-related intent buckets (separate from general FAQ)
+BRAND_INTENTS = {
+    "brand_3m": {
+        "aliases": ["trabajan con 3m", "usan 3m", "tienen 3m", "manejan 3m", "ofrecen 3m"],
+        "answer": "Actualmente no. Polaritech trabaja con tecnologías seleccionadas por su equilibrio entre desempeño, calidad y costo."
+    },
+    "brand_general": {
+        "aliases": [
+            "que marcas trabajan",
+            "con cual marca trabajan",
+            "cuales marcas manejan",
+            "que marca usan",
+            "manejan alguna marca especifica",
+            "trabajan con alguna marca",
+            "usan alguna marca",
+            "marca de las laminas",
+            "que marcas manejan",
+            "cual marca usan",
+        ],
+        "answer": "Actualmente no trabajamos con 3M. Polaritech trabaja con tecnologías seleccionadas por su equilibrio entre desempeño, calidad y costo. Si desea, puedo orientarle según su necesidad: calor, privacidad, seguridad o decoración."
+    },
+    "competitor_cheaper_3m": {
+        "aliases": ["me ofrecieron 3m mas barato", "otra empresa me ofrece 3m mas barato", "3m mas barato"],
+        "answer": "Es posible. Se recomienda comparar tecnología, desempeño, garantía e instalación, no solo la marca."
+    },
+    "competitor_comparison": {
+        "aliases": ["por que ustedes y no otra marca", "que diferencia tienen con otras marcas", "comparacion con otras marcas"],
+        "answer": "Responder con respeto, reconocer que hay distintas gamas y centrar la explicación en tecnología, garantía, instalación y valor."
+    },
+}
+
+
+def _check_brand_intents(query: str) -> Optional[str]:
+    """Check if query matches a brand-related intent bucket.
+    Prioritizes longer, more specific aliases over shorter ones."""
+    q_norm = _normalize(query)
+    
+    # Sort all aliases by length (descending) to match more specific ones first
+    all_aliases = []
+    for intent_name, intent_data in BRAND_INTENTS.items():
+        for alias in intent_data["aliases"]:
+            all_aliases.append((alias, intent_data["answer"]))
+    
+    all_aliases.sort(key=lambda x: len(x[0]), reverse=True)
+    
+    for alias, answer in all_aliases:
+        if alias in q_norm:
+            return answer
+    return None
+
 
 def _check_pending_confirmation(query: str) -> Optional[str]:
     """Check if query asks for a field that requires pending confirmation response.
@@ -240,10 +290,11 @@ def find_answer(query: str) -> str | None:
     Main entry point with new resolution order:
     1. Pending confirmation fields (horario, telefono, etc.)
     2. Silver Espejo warranty protection
-    3. Canonical intent buckets (calor, privacidad, etc.)
-    4. Exact FAQ match (high confidence ≥50%)
-    5. Product match
-    6. MD fallback
+    3. Brand intents (brand_3m, brand_general, competitor_cheaper_3m, competitor_comparison)
+    4. Canonical intent buckets (calor, privacidad, etc.)
+    5. Exact FAQ match (high confidence ≥50%)
+    6. Product match
+    7. MD fallback
     Returns None only when no source has a match.
     """
     kb = get_kb()
@@ -258,22 +309,27 @@ def find_answer(query: str) -> str | None:
     if silver_answer:
         return silver_answer
     
-    # 3. Check canonical intent buckets for frequent questions
+    # 3. Check brand intents (brand_3m, brand_general, competitor_cheaper_3m, competitor_comparison)
+    brand_answer = _check_brand_intents(query)
+    if brand_answer:
+        return brand_answer
+    
+    # 4. Check canonical intent buckets for frequent questions
     canonical_answer = _check_canonical_intent(query, kb.faq)
     if canonical_answer:
         return canonical_answer
 
-    # 4. FAQ JSON high-confidence match (≥50% overlap)
+    # 5. FAQ JSON high-confidence match (≥50% overlap)
     faq_answer = _faq_match(query, kb.faq)
     if faq_answer:
         return faq_answer
 
-    # 5. Product match
+    # 6. Product match
     product_answer = _product_match(query, kb)
     if product_answer:
         return product_answer
 
-    # 6. MD fallback
+    # 7. MD fallback
     md_answer = _md_fallback(query)
     if md_answer:
         return md_answer
