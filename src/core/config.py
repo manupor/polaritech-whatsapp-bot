@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     escalation_phone_number: str = ""
 
     # Outbound HTTP
-    whatsapp_send_timeout: float = 30.0
+    whatsapp_send_timeout: float = 60.0
 
     # Database
     database_url: str = "sqlite:///polaritech.db"
