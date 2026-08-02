@@ -192,13 +192,23 @@ async def _process_message(
         bot_response = handle_message(incoming)
 
         logger.info(
-            "outbound_intent  msg_id=%s  intent=%s  escalated=%s",
+            "outbound_intent  msg_id=%s  intent=%s  escalated=%s  buttons=%d",
             msg_id, bot_response.intent.value, bot_response.escalated,
+            len(bot_response.buttons),
         )
 
-        result = await whatsapp_client.send_text(
-            bot_response.phone_number, bot_response.reply_text,
-        )
+        # Send interactive buttons if present, otherwise plain text
+        if bot_response.buttons:
+            result = await whatsapp_client.send_interactive_buttons(
+                bot_response.phone_number,
+                body_text=bot_response.reply_text,
+                buttons=bot_response.buttons,
+            )
+        else:
+            result = await whatsapp_client.send_text(
+                bot_response.phone_number, bot_response.reply_text,
+            )
+
         logger.info(
             "outbound_result  msg_id=%s  send_ok=%s  wa_msg_id=%s",
             msg_id, result.success, result.message_id or "n/a",

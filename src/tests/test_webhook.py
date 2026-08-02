@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from src.db.database import get_db
 from src.db import repositories as repo
 from src.main import app
-from src.services.whatsapp_service import WhatsAppClient
+from src.services.whatsapp_service import SendResult, WhatsAppClient
 from src.state.idempotency_store import InMemoryIdempotencyStore, idempotency_store
 
 
@@ -35,7 +35,7 @@ def _seed_existing_contact():
     """Seed default senders so the welcome flow does NOT trigger in these tests."""
     db = get_db()
     try:
-        for phone in (_DEFAULT_SENDER, "50688005678"):
+        for phone in (_DEFAULT_SENDER, "50688005678", "50688099999"):
             repo.upsert_contact(db, phone, "Test User")
             repo.upsert_snapshot(db, phone_number=phone, current_intent="greeting", last_bot_response="hi")
         db.commit()
@@ -251,20 +251,22 @@ def test_verify_webhook_missing_params():
 
 @patch("src.api.webhook.whatsapp_client")
 def test_inbound_text_message(mock_wa):
-    mock_wa.send_text = AsyncMock()
-    resp = client.post("/webhook", json=_text_payload("Hola buenas tardes"))
+    mock_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    # Use seeded sender to avoid welcome, test normal response with buttons
+    resp = client.post("/webhook", json=_text_payload("Información de productos"))
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
-    # Should have called send_text with the greeting reply
-    mock_wa.send_text.assert_called_once()
-    call_args = mock_wa.send_text.call_args
+    # Product info should have sent buttons
+    mock_wa.send_interactive_buttons.assert_called_once()
+    call_args = mock_wa.send_interactive_buttons.call_args
     assert call_args[0][0] == "50688001234"  # to
-    assert "Polaritech" in call_args[0][1]   # reply contains Polaritech
 
 
 @patch("src.api.webhook.whatsapp_client")
 def test_inbound_text_extracts_sender_name(mock_wa):
-    mock_wa.send_text = AsyncMock()
+    mock_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
     payload = _text_payload("Hola", sender_name="María García")
     resp = client.post("/webhook", json=payload)
     assert resp.status_code == 200
@@ -273,7 +275,8 @@ def test_inbound_text_extracts_sender_name(mock_wa):
 @patch("src.api.webhook.whatsapp_client")
 def test_inbound_multiple_messages(mock_wa):
     """Payload with two messages should trigger two outbound replies."""
-    mock_wa.send_text = AsyncMock()
+    mock_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
     payload = _text_payload("Hola")
     # Add a second message to the same entry
     payload["entry"][0]["changes"][0]["value"]["messages"].append({
@@ -285,7 +288,8 @@ def test_inbound_multiple_messages(mock_wa):
     })
     resp = client.post("/webhook", json=payload)
     assert resp.status_code == 200
-    assert mock_wa.send_text.call_count == 2
+    # Both greetings use buttons now
+    assert mock_wa.send_interactive_buttons.call_count == 2
 
 
 # ── Unsupported message types ────────────────────────────────────────────────
@@ -333,8 +337,9 @@ def test_status_payload_no_reply(mock_wa):
 
 @patch("src.api.webhook.whatsapp_client")
 def test_duplicate_payload_no_double_reply(mock_wa):
-    """Sending the same msg_id twice should only trigger one outbound reply."""
-    mock_wa.send_text = AsyncMock()
+    """Same message_id twice should only reply once due to idempotency."""
+    mock_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
     payload = _text_payload("Hola", msg_id="wamid.dedup001")
 
     resp1 = client.post("/webhook", json=payload)
@@ -343,20 +348,22 @@ def test_duplicate_payload_no_double_reply(mock_wa):
     resp2 = client.post("/webhook", json=payload)
     assert resp2.status_code == 200
 
-    # Only one send despite two webhook deliveries
-    assert mock_wa.send_text.call_count == 1
+    # Only one send despite two webhook deliveries (greeting uses buttons)
+    assert mock_wa.send_interactive_buttons.call_count == 1
 
 
 @patch("src.api.webhook.whatsapp_client")
 def test_different_msg_ids_both_processed(mock_wa):
-    """Two different msg_ids should each get their own reply."""
-    mock_wa.send_text = AsyncMock()
+    """Different message_ids should both trigger replies."""
+    mock_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
 
     resp1 = client.post("/webhook", json=_text_payload("Hola", msg_id="wamid.a"))
     resp2 = client.post("/webhook", json=_text_payload("Hola", msg_id="wamid.b"))
     assert resp1.status_code == 200
     assert resp2.status_code == 200
-    assert mock_wa.send_text.call_count == 2
+    # Both greetings use buttons now
+    assert mock_wa.send_interactive_buttons.call_count == 2
 
 
 # ── Outbound payload format ─────────────────────────────────────────────────

@@ -12,6 +12,7 @@ from src.db import repositories as repo
 from src.main import app
 from src.schemas.chatbot import IncomingMessage
 from src.services.response_service import handle_message
+from src.services.whatsapp_service import SendResult
 from src.state.idempotency_store import InMemoryIdempotencyStore, idempotency_store
 
 client = TestClient(app)
@@ -85,10 +86,11 @@ def _seed_conversation(phone: str, takeover: bool = False):
 @patch("src.services.welcome_service.whatsapp_client")
 def test_bot_paused_when_human_takeover(mock_welcome_wa, mock_webhook_wa):
     """When human_takeover=true, bot should NOT send a response."""
-    mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_welcome_wa.send_image = AsyncMock()
-    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_welcome_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_txt"))
+    mock_welcome_wa.send_image = AsyncMock(return_value=SendResult(success=True, message_id="wmid_img"))
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_menu"))
+    mock_webhook_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
 
     phone = "50688088001"
     _seed_conversation(phone, takeover=True)
@@ -108,10 +110,11 @@ def test_bot_paused_when_human_takeover(mock_welcome_wa, mock_webhook_wa):
 @patch("src.services.welcome_service.whatsapp_client")
 def test_bot_responds_when_not_takeover(mock_welcome_wa, mock_webhook_wa):
     """When human_takeover=false, bot responds normally."""
-    mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_welcome_wa.send_image = AsyncMock()
-    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_welcome_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_txt"))
+    mock_welcome_wa.send_image = AsyncMock(return_value=SendResult(success=True, message_id="wmid_img"))
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_menu"))
+    mock_webhook_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
 
     phone = "50688088002"
     _seed_conversation(phone, takeover=False)
@@ -121,8 +124,8 @@ def test_bot_responds_when_not_takeover(mock_welcome_wa, mock_webhook_wa):
     ))
     assert resp.status_code == 200
 
-    # Bot should have sent a response
-    mock_webhook_wa.send_text.assert_called_once()
+    # Bot should have sent a response (greeting uses buttons)
+    mock_webhook_wa.send_interactive_buttons.assert_called_once()
 
 
 # ── Dashboard takeover action ────────────────────────────────────────────────

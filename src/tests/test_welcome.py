@@ -13,7 +13,7 @@ from src.db import repositories as repo
 from src.db.models import ConversationSnapshot, Contact, MessageLog
 from src.main import app
 from src.services.welcome_service import WELCOME_TEXT, maybe_send_welcome
-from src.services.whatsapp_service import WhatsAppClient
+from src.services.whatsapp_service import WhatsAppClient, SendResult
 from src.state.idempotency_store import InMemoryIdempotencyStore, idempotency_store
 
 client = TestClient(app)
@@ -77,10 +77,11 @@ def test_new_contact_gets_welcome(mock_welcome_wa, mock_webhook_wa, mock_setting
     mock_settings.whatsapp_welcome_image_id = ""
     mock_settings.whatsapp_access_token = "test_token"
 
-    mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id="wmid_txt"))
-    mock_welcome_wa.send_image = AsyncMock(return_value=AsyncMock(message_id="wmid_img"))
-    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id="wmid_menu"))
-    mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id="wmid_reply"))
+    mock_welcome_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_txt"))
+    mock_welcome_wa.send_image = AsyncMock(return_value=SendResult(success=True, message_id="wmid_img"))
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_menu"))
+    mock_webhook_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
 
     resp = client.post("/webhook", json=_text_payload(sender="50688077777"))
     assert resp.status_code == 200
@@ -104,7 +105,9 @@ def test_existing_active_conversation_no_welcome(mock_welcome_wa, mock_webhook_w
     """If contact has a recent snapshot, welcome is NOT sent."""
     mock_welcome_wa.send_text = AsyncMock()
     mock_welcome_wa.send_image = AsyncMock()
+    mock_welcome_wa.send_interactive_buttons = AsyncMock()
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     phone = "50688066666"
 
@@ -146,6 +149,7 @@ def test_old_conversation_gets_welcome_again(mock_welcome_wa, mock_webhook_wa, m
     mock_welcome_wa.send_image = AsyncMock()
     mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     phone = "50688055555"
 
@@ -186,6 +190,7 @@ def test_duplicate_webhook_no_duplicate_welcome(mock_welcome_wa, mock_webhook_wa
     mock_welcome_wa.send_image = AsyncMock()
     mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     payload = _text_payload(sender="50688044444", msg_id="wamid.dedup_welcome")
     resp1 = client.post("/webhook", json=payload)
@@ -213,6 +218,7 @@ def test_missing_image_config_text_only(mock_welcome_wa, mock_webhook_wa, mock_s
     mock_welcome_wa.send_image = AsyncMock()
     mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
     mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
 
     resp = client.post("/webhook", json=_text_payload(sender="50688033333", msg_id="wamid.noimg001"))
     assert resp.status_code == 200
