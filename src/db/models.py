@@ -57,6 +57,7 @@ class ConversationSnapshot(Base):
     phone_number = Column(String(32), unique=True, nullable=False, index=True)
     current_intent = Column(String(32), nullable=True)
     flow_type = Column(String(20), nullable=True)
+    flow_status = Column(String(20), nullable=False, default="idle")  # idle, collecting, completed
     collected_fields_json = Column(Text, nullable=True)
     missing_fields_json = Column(Text, nullable=True)
     needs_human = Column(Integer, nullable=False, default=0)  # 0/1, SQLite-friendly bool

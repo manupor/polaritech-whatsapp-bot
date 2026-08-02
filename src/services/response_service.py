@@ -44,6 +44,15 @@ def _get_buttons_for_intent(intent: Intent) -> List[dict]:
     return INTENT_BUTTONS.get(intent, [])
 
 
+def _get_post_closure_buttons(flow_type: str) -> List[dict]:
+    """Return buttons shown after a flow completes (no collection buttons)."""
+    return [
+        {"id": "go_main_menu", "title": "🏠 Menú principal"},
+        {"id": "start_visit_flow", "title": "📅 Agendar visita"},
+        {"id": "human_help", "title": "👤 Hablar con asesor"},
+    ]
+
+
 def _classify_intent_hybrid(text: str) -> Intent:
     """
     Classify intent using LLM with fallback to keyword-based classification.
@@ -271,12 +280,13 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
         escalation = build_escalation_payload(
             Intent.QUOTE_REQUEST, flow, summary="Cotización lista para seguimiento",
         )
-        conversation_store.clear_flow(phone)
         conversation_store.add_turn(phone, "bot", reply)
+        # Don't clear flow yet - let persist_outbound capture completed state
+        # Flow will be cleared after persistence in webhook
         return BotResponse(
             phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST,
             escalated=True, escalation=escalation,
-            buttons=_get_buttons_for_intent(Intent.QUOTE_REQUEST),
+            buttons=_get_post_closure_buttons("quote"),
         )
 
     # Ask only for missing fields
@@ -317,7 +327,13 @@ def _handle_warranty(phone: str, text: str) -> BotResponse:
             "Gracias por compartir toda la información. Un asesor de Polaritech "
             "revisará su caso y se comunicará con usted a la brevedad."
         )
-        conversation_store.clear_flow(phone)
+        conversation_store.add_turn(phone, "bot", reply)
+        # Don't clear flow yet - let persist_outbound capture completed state
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.WARRANTY_CLAIM,
+            escalated=True, escalation=escalation,
+            buttons=_get_post_closure_buttons("warranty"),
+        )
     else:
         missing = flow.warranty_missing()
         missing_text = _format_missing_fields(missing)
@@ -491,16 +507,55 @@ def register_image_analysis(phone: str, description: str) -> BotResponse:
     )
 
 
+def _handle_button_click(phone: str, button_id: str) -> BotResponse:
+    """Handle post-closure button clicks."""
+    if button_id == "go_main_menu":
+        reply = TEMPLATES["greeting"]
+        conversation_store.add_turn(phone, "bot", reply)
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.GREETING,
+            buttons=_get_buttons_for_intent(Intent.GREETING),
+        )
+    elif button_id == "start_visit_flow":
+        return _handle_technical_visit(phone, "")
+    elif button_id == "human_help":
+        return _handle_explicit_escalation(phone)
+    else:
+        # Unknown button - treat as unknown intent
+        reply = TEMPLATES["unknown"]
+        conversation_store.add_turn(phone, "bot", reply)
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.UNKNOWN,
+            buttons=_get_buttons_for_intent(Intent.UNKNOWN),
+        )
+
+
 # ── Main orchestrator ────────────────────────────────────────────────────────
 
 def handle_message(msg: IncomingMessage) -> BotResponse:
     phone = msg.phone_number
     text = msg.text
+    button_id = getattr(msg, 'button_id', None)
+    button_title = getattr(msg, 'button_title', None)
 
     conversation_store.add_turn(phone, role="user", text=text)
 
-    # Check if user is in an active quote flow and sends data (not a new intent)
     current_flow = conversation_store.get_flow(phone)
+    logger.info(
+        "message_received  phone=%s  text=%s  button_id=%s  button_title=%s  active_flow=%s  flow_status=%s",
+        phone, text[:80], button_id or 'n/a', button_title or 'n/a',
+        current_flow.flow_type or 'idle', 'collecting' if current_flow.flow_type else 'idle',
+    )
+    
+    # If message comes from interactive button, use button_id instead of text classification
+    if button_id:
+        logger.info(
+            "button_click  phone=%s  button_id=%s  button_title=%s  current_flow=%s",
+            phone, button_id, button_title or 'n/a', current_flow.flow_type,
+        )
+        return _handle_button_click(phone, button_id)
+
+    # Check if user is in an active quote flow and sends data (not a new intent)
     if current_flow.flow_type == "quote":
         intent = _classify_intent_hybrid(text)
         # If the user isn't switching to a completely different intent, treat as
@@ -513,7 +568,10 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
                 return _handle_quote(phone, text)
 
     intent = _classify_intent_hybrid(text)
-    logger.info("Intent for %s: %s", phone, intent)
+    logger.info(
+        "resolved_intent  phone=%s  intent=%s  button_id=%s",
+        phone, intent.value, button_id or 'n/a',
+    )
 
     if intent == Intent.ESCALATE:
         return _handle_explicit_escalation(phone)

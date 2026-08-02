@@ -15,6 +15,8 @@ class IncomingMessage(BaseModel):
     message_id: str
     text: str
     timestamp: str
+    button_id: Optional[str] = None
+    button_title: Optional[str] = None
 
 
 class EscalationPayload(BaseModel):
