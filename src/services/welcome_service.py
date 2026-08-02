@@ -55,30 +55,27 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
 
     logger.info("welcome_flow_triggered  phone=%s  name=%s", phone_number, sender_name)
 
-    # 1. Send image with greeting as caption (or just text if no image configured)
+    # Send welcome text with interactive buttons in one message
+    welcome_body = f"{WELCOME_TEXT}\n\n{MENU_BODY}"
+    menu_result = await whatsapp_client.send_interactive_buttons(
+        phone_number,
+        body=welcome_body,
+        buttons=MENU_BUTTONS,
+        footer=MENU_FOOTER,
+    )
+    _persist_menu(phone_number, menu_result)
+
+    # Send image separately if configured (after the text to avoid disorder)
     image_url = settings.whatsapp_welcome_image_url
     media_id = settings.whatsapp_welcome_image_id
-
     if image_url or media_id:
         img_result = await whatsapp_client.send_image(
             phone_number,
             image_url=image_url,
             media_id=media_id,
-            caption=WELCOME_TEXT,
+            caption="",
         )
         _persist_welcome_image(phone_number, img_result)
-    else:
-        text_result = await whatsapp_client.send_text(phone_number, WELCOME_TEXT)
-        _persist_welcome_text(phone_number, text_result)
-
-    # 2. Send interactive menu with buttons
-    menu_result = await whatsapp_client.send_interactive_buttons(
-        phone_number,
-        body=MENU_BODY,
-        buttons=MENU_BUTTONS,
-        footer=MENU_FOOTER,
-    )
-    _persist_menu(phone_number, menu_result)
 
     return True
 

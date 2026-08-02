@@ -223,13 +223,19 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
     if "metro" in t_lower and ("cuánto" in t_lower or "cuanto" in t_lower or "vale" in t_lower or "cuesta" in t_lower):
         reply = TEMPLATES["price_per_meter"]
         conversation_store.add_turn(phone, "bot", reply)
-        return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST)
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST,
+            buttons=_get_buttons_for_intent(Intent.QUOTE_REQUEST),
+        )
 
     # If first interaction in quote flow and nothing collected yet, give full intro
     if not flow.collected:
         reply = TEMPLATES["quote_initial"]
         conversation_store.add_turn(phone, "bot", reply)
-        return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST)
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST,
+            buttons=_get_buttons_for_intent(Intent.QUOTE_REQUEST),
+        )
 
     # If no measurements explicitly
     if flow.no_measurements and "medidas" not in flow.collected:

@@ -86,15 +86,20 @@ def test_new_contact_gets_welcome(mock_welcome_wa, mock_webhook_wa, mock_setting
     resp = client.post("/webhook", json=_text_payload(sender="50688077777"))
     assert resp.status_code == 200
 
-    # Welcome image was sent with greeting as caption
+    # Interactive menu buttons were sent first (with welcome text)
+    mock_welcome_wa.send_interactive_buttons.assert_called_once()
+    menu_call = mock_welcome_wa.send_interactive_buttons.call_args
+    assert menu_call[0][0] == "50688077777"
+    # Check that welcome text is in the body keyword argument
+    body_text = menu_call[1].get("body", "")
+    assert WELCOME_TEXT in body_text
+
+    # Welcome image was sent after the buttons (with empty caption)
     mock_welcome_wa.send_image.assert_called_once()
     img_call = mock_welcome_wa.send_image.call_args
     assert img_call[0][0] == "50688077777"
     assert img_call[1]["image_url"] == "https://example.com/welcome.jpg"
-    assert img_call[1]["caption"] == WELCOME_TEXT
-
-    # Interactive menu buttons were sent
-    mock_welcome_wa.send_interactive_buttons.assert_called_once()
+    assert img_call[1]["caption"] == ""
 
 
 # ── Test: Existing active conversation does NOT get welcome again ────────────
@@ -103,11 +108,10 @@ def test_new_contact_gets_welcome(mock_welcome_wa, mock_webhook_wa, mock_setting
 @patch("src.services.welcome_service.whatsapp_client")
 def test_existing_active_conversation_no_welcome(mock_welcome_wa, mock_webhook_wa):
     """If contact has a recent snapshot, welcome is NOT sent."""
-    mock_welcome_wa.send_text = AsyncMock()
-    mock_welcome_wa.send_image = AsyncMock()
-    mock_welcome_wa.send_interactive_buttons = AsyncMock()
-    mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
-    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_welcome_wa.send_image = AsyncMock(return_value=SendResult(success=True, message_id="wmid_img"))
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_menu"))
+    mock_webhook_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
 
     phone = "50688066666"
 
@@ -129,7 +133,7 @@ def test_existing_active_conversation_no_welcome(mock_welcome_wa, mock_webhook_w
     assert resp.status_code == 200
 
     # Welcome was NOT sent
-    mock_welcome_wa.send_text.assert_not_called()
+    mock_welcome_wa.send_interactive_buttons.assert_not_called()
     mock_welcome_wa.send_image.assert_not_called()
 
 
@@ -145,11 +149,10 @@ def test_old_conversation_gets_welcome_again(mock_welcome_wa, mock_webhook_wa, m
     mock_settings.whatsapp_welcome_image_id = ""
     mock_settings.whatsapp_access_token = "test_token"
 
-    mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_welcome_wa.send_image = AsyncMock()
-    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
-    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_welcome_wa.send_image = AsyncMock(return_value=SendResult(success=True, message_id="wmid_img"))
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_menu"))
+    mock_webhook_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
 
     phone = "50688055555"
 
@@ -171,7 +174,7 @@ def test_old_conversation_gets_welcome_again(mock_welcome_wa, mock_webhook_wa, m
     assert resp.status_code == 200
 
     # Welcome text was sent (but no image since config is empty)
-    mock_welcome_wa.send_text.assert_called_once()
+    mock_welcome_wa.send_interactive_buttons.assert_called_once()
 
 
 # ── Test: Duplicate webhook does NOT duplicate welcome ───────────────────────
@@ -186,11 +189,10 @@ def test_duplicate_webhook_no_duplicate_welcome(mock_welcome_wa, mock_webhook_wa
     mock_settings.whatsapp_welcome_image_id = ""
     mock_settings.whatsapp_access_token = "test_token"
 
-    mock_welcome_wa.send_text = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_welcome_wa.send_image = AsyncMock()
-    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(message_id=""))
-    mock_webhook_wa.send_text = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
-    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=AsyncMock(success=True, message_id=""))
+    mock_welcome_wa.send_image = AsyncMock(return_value=SendResult(success=True, message_id="wmid_img"))
+    mock_welcome_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_menu"))
+    mock_webhook_wa.send_text = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
+    mock_webhook_wa.send_interactive_buttons = AsyncMock(return_value=SendResult(success=True, message_id="wmid_reply"))
 
     payload = _text_payload(sender="50688044444", msg_id="wamid.dedup_welcome")
     resp1 = client.post("/webhook", json=payload)
@@ -199,7 +201,7 @@ def test_duplicate_webhook_no_duplicate_welcome(mock_welcome_wa, mock_webhook_wa
     assert resp2.status_code == 200
 
     # Welcome text sent only once
-    assert mock_welcome_wa.send_text.call_count == 1
+    assert mock_welcome_wa.send_interactive_buttons.call_count == 1
 
 
 # ── Test: Missing image config sends only greeting text ──────────────────────
@@ -224,7 +226,7 @@ def test_missing_image_config_text_only(mock_welcome_wa, mock_webhook_wa, mock_s
     assert resp.status_code == 200
 
     # Text sent, image NOT sent
-    mock_welcome_wa.send_text.assert_called_once()
+    mock_welcome_wa.send_interactive_buttons.assert_called_once()
     mock_welcome_wa.send_image.assert_not_called()
 
 
