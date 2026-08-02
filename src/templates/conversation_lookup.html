@@ -54,6 +54,7 @@
     </dl>
 
     <div class="actions">
+        <a href="/dashboard/messages?phone={{ snapshot.phone_number }}" class="btn btn-secondary">Ver historial completo</a>
         {% if not snapshot.human_takeover %}
         <form method="post" action="/dashboard/conversations/takeover" style="display:inline;">
             <input type="hidden" name="phone" value="{{ snapshot.phone_number }}">

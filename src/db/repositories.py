@@ -322,6 +322,20 @@ def list_leads(
     return q.order_by(desc(LeadRecord.created_at)).offset(offset).limit(limit).all()
 
 
+def list_message_logs(
+    db: Session,
+    *,
+    phone_number: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> List[MessageLog]:
+    """List message logs, optionally filtered by phone_number."""
+    q = db.query(MessageLog)
+    if phone_number:
+        q = q.filter(MessageLog.phone_number == phone_number)
+    return q.order_by(desc(MessageLog.created_at)).offset(offset).limit(limit).all()
+
+
 def update_lead_status(
     db: Session, record_id: int, new_status: str,
 ) -> Optional[LeadRecord]:

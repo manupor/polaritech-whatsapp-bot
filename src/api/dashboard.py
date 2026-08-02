@@ -148,6 +148,28 @@ def lead_update_status(record_id: int, status: str = Form(...)):
     return RedirectResponse(url=f"/dashboard/leads/{record_id}", status_code=303)
 
 
+# ── Message History ────────────────────────────────────────────────────────────
+
+@router.get("/messages", response_class=HTMLResponse)
+def message_history(
+    request: Request,
+    phone: Optional[str] = Query(None),
+):
+    """View full message log history for a phone number."""
+    messages = []
+    if phone:
+        db = get_db()
+        try:
+            messages = repo.list_message_logs(db, phone_number=phone, limit=200)
+        finally:
+            db.close()
+
+    return templates.TemplateResponse(request, "message_history.html", {
+        "phone": phone or "",
+        "messages": messages,
+    })
+
+
 # ── Conversation Lookup ──────────────────────────────────────────────────────
 
 @router.get("/conversations", response_class=HTMLResponse)

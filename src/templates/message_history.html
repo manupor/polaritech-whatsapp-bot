@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Mensajes - Polaritech Bot</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 20px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #007bff; text-decoration: none; }
+        .message-list { margin-top: 20px; }
+        .message { padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #ddd; }
+        .message.inbound { background: #e3f2fd; border-left-color: #2196f3; }
+        .message.outbound { background: #f1f8e9; border-left-color: #4caf50; }
+        .message-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #666; }
+        .message-direction { font-weight: bold; text-transform: uppercase; }
+        .message-type { color: #999; }
+        .message-text { white-space: pre-wrap; word-wrap: break-word; color: #333; }
+        .message-intent { display: inline-block; background: #e0e0e0; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px; }
+        .no-messages { text-align: center; color: #999; padding: 40px; }
+        .empty { text-align: center; color: #999; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="back-link">← Volver al Dashboard</a>
+        <h1>Historial de Mensajes</h1>
+        
+        <div class="search-box">
+            <form method="get">
+                <input type="text" name="phone" placeholder="Número de teléfono (ej: 50612345678)" value="{{ phone }}">
+                <button type="submit">Buscar</button>
+            </form>
+        </div>
+
+        {% if phone %}
+            {% if messages %}
+                <div class="message-list">
+                    {% for msg in messages %}
+                    <div class="message {{ msg.direction }}">
+                        <div class="message-header">
+                            <span class="message-direction">{{ msg.direction }}</span>
+                            <span>{{ msg.created_at }}</span>
+                        </div>
+                        <div class="message-header">
+                            <span class="message-type">{{ msg.message_type }}</span>
+                            {% if msg.intent %}
+                            <span class="message-intent">{{ msg.intent }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="message-text">{{ msg.text }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-messages">
+                    No se encontraron mensajes para el número {{ phone }}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty">
+                Ingrese un número de teléfono para ver el historial de conversación
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

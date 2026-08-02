@@ -31,3 +31,5 @@ class BotResponse(BaseModel):
     intent: Intent
     escalated: bool = False
     escalation: Optional[EscalationPayload] = None
+    # Quick-reply buttons offered to guide the user. Each item: {"id", "title"}
+    buttons: List[Dict[str, str]] = []

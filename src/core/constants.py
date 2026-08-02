@@ -95,6 +95,50 @@ INTENT_KEYWORDS: Dict[Intent, List[str]] = {
     ],
 }
 
+# ── Quick-reply buttons ─────────────────────────────────────────────────────
+# WhatsApp reply buttons: max 3 per message, title max 20 characters.
+
+BTN_PRODUCTOS = {"id": "menu_productos", "title": "Info de productos"}
+BTN_COTIZACION = {"id": "menu_cotizacion", "title": "Cotización"}
+BTN_VISITA = {"id": "menu_visita", "title": "Agendar visita"}
+BTN_ASESOR = {"id": "menu_asesor", "title": "Hablar con asesor"}
+BTN_SIN_MEDIDAS = {"id": "quote_sin_medidas", "title": "No tengo medidas"}
+
+# Fallback offered whenever an intent has no specific set
+DEFAULT_BUTTONS: List[Dict[str, str]] = [BTN_PRODUCTOS, BTN_COTIZACION, BTN_VISITA]
+
+INTENT_BUTTONS: Dict[Intent, List[Dict[str, str]]] = {
+    Intent.GREETING: [BTN_PRODUCTOS, BTN_COTIZACION, BTN_VISITA],
+    Intent.UNKNOWN: [BTN_PRODUCTOS, BTN_COTIZACION, BTN_ASESOR],
+    Intent.FAQ: [BTN_COTIZACION, BTN_PRODUCTOS, BTN_ASESOR],
+    Intent.PRODUCT_INFO: [BTN_COTIZACION, BTN_VISITA, BTN_ASESOR],
+    Intent.QUOTE_REQUEST: [BTN_SIN_MEDIDAS, BTN_VISITA, BTN_ASESOR],
+    Intent.APPOINTMENT: [BTN_COTIZACION, BTN_ASESOR],
+    Intent.TECHNICAL_VISIT: [BTN_COTIZACION, BTN_ASESOR],
+    Intent.COMPETITOR: [BTN_PRODUCTOS, BTN_COTIZACION, BTN_ASESOR],
+    Intent.DISCOUNT: [BTN_COTIZACION, BTN_PRODUCTOS, BTN_ASESOR],
+    Intent.PENDING_QUERY: [BTN_ASESOR],
+    # Already handed off to a human — no options to avoid confusion
+    Intent.ESCALATE: [],
+    Intent.WARRANTY_CLAIM: [],
+}
+
+# Text sent to the pipeline when a button is tapped
+BUTTON_ID_TO_TEXT: Dict[str, str] = {
+    "menu_productos": "Información de productos",
+    "menu_cotizacion": "Quiero solicitar una cotización",
+    "menu_visita": "Necesito una visita técnica",
+    "menu_asesor": "asesor",
+    "quote_sin_medidas": "No tengo medidas",
+}
+
+# Prompt used when the reply body is too long to fit in an interactive message
+BUTTONS_FOLLOWUP_PROMPT = "¿Cómo desea continuar?"
+
+# WhatsApp interactive body limit
+INTERACTIVE_BODY_LIMIT = 1024
+
+
 # ── Escalation triggers ─────────────────────────────────────────────────────
 ALWAYS_ESCALATE_INTENTS: FrozenSet[Intent] = frozenset({
     Intent.WARRANTY_CLAIM,
