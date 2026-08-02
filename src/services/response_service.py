@@ -21,6 +21,8 @@ from src.core.constants import (
     BUTTONS_FOLLOWUP_PROMPT,
     BUTTON_ID_TO_INTENT,
     FIELD_LABELS,
+    FLOW_BUTTON_IDS,
+    FLOW_TEXT_ALIASES,
     INTENT_BUTTONS,
     INTERACTIVE_BODY_LIMIT,
     Intent,
@@ -28,6 +30,7 @@ from src.core.constants import (
     NEED_TO_PRODUCT,
     normalize_text,
     PENDING_PHRASE,
+    QUOTE_NO_MEASUREMENTS,
     TEMPLATES,
     TEXT_ALIASES,
 )
@@ -565,6 +568,31 @@ def register_image_analysis(phone: str, description: str) -> BotResponse:
     )
 
 
+def _handle_flow_button(phone: str, button_id: str, flow: FlowState) -> BotResponse:
+    """Handle flow-specific button clicks within active flows."""
+    if button_id == QUOTE_NO_MEASUREMENTS:
+        flow.no_measurements = True
+        logger.info(
+            "quote_no_measurements_set  phone=%s  no_measurements=True",
+            phone,
+        )
+        return _handle_quote(phone, "")
+    elif button_id == QUOTE_SCHEDULE_VISIT:
+        # Switch to technical visit flow
+        conversation_store.clear_flow(phone)
+        return _handle_technical_visit(phone, "")
+    elif button_id == QUOTE_HUMAN_HELP:
+        return _handle_explicit_escalation(phone)
+    
+    # Unknown flow button - treat as unknown
+    reply = TEMPLATES["unknown"]
+    conversation_store.add_turn(phone, "bot", reply)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.UNKNOWN,
+        buttons=_get_buttons_for_intent(Intent.UNKNOWN),
+    )
+
+
 def _handle_button_click(phone: str, button_id: str) -> BotResponse:
     """Handle button clicks including menu buttons and post-closure buttons."""
     # Handle menu buttons using direct mapping
@@ -614,34 +642,86 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
     current_flow = conversation_store.get_flow(phone)
     normalized_text = normalize_text(text)
     
+    # Log initial state
     logger.info(
-        "message_received  phone=%s  raw_text=%s  normalized_text=%s  button_id=%s  button_title=%s  active_flow=%s",
+        "message_received  phone=%s  raw_text=%s  normalized_text=%s  button_id=%s  button_title=%s  active_flow=%s  pending_fields_before=%d",
         phone, text[:80], normalized_text[:80], button_id or 'n/a', button_title or 'n/a',
-        current_flow.flow_type or 'idle',
+        current_flow.flow_type or 'idle', len(current_flow.quote_missing()) if current_flow.flow_type == 'quote' else 0,
     )
     
-    # Use unified intent resolver with priority
+    # Priority 1: Check for flow-specific button IDs (handle within active flow)
+    if button_id and button_id in FLOW_BUTTON_IDS:
+        flow_type = FLOW_BUTTON_IDS[button_id]
+        if current_flow.flow_type == flow_type:
+            logger.info(
+                "flow_button_handled  phone=%s  button_id=%s  flow=%s",
+                phone, button_id, flow_type,
+            )
+            return _handle_flow_button(phone, button_id, current_flow)
+    
+    # Priority 2: Check for flow-specific text aliases (handle within active flow)
+    if normalized_text in FLOW_TEXT_ALIASES:
+        action = FLOW_TEXT_ALIASES[normalized_text]
+        if current_flow.flow_type == "quote" and action == "no_measurements":
+            logger.info(
+                "flow_text_alias_handled  phone=%s  action=%s  flow=quote",
+                phone, action,
+            )
+            current_flow.no_measurements = True
+            return _handle_quote(phone, text)
+    
+    # Priority 3: Check for menu button IDs (global navigation)
+    if button_id and button_id in BUTTON_ID_TO_INTENT:
+        logger.info(
+            "menu_button_handled  phone=%s  button_id=%s  intent=%s",
+            phone, button_id, BUTTON_ID_TO_INTENT[button_id].value,
+        )
+        return _handle_button_click(phone, button_id)
+    
+    # Priority 3.5: Check for post-closure buttons (go_main_menu, start_visit_flow, human_help)
+    if button_id and button_id in ("go_main_menu", "start_visit_flow", "human_help"):
+        logger.info(
+            "post_closure_button_handled  phone=%s  button_id=%s",
+            phone, button_id,
+        )
+        return _handle_button_click(phone, button_id)
+    
+    # Priority 4: Active flow data collection
+    if current_flow.flow_type == "quote":
+        # If the user isn't switching to a completely different intent, treat as
+        # continued quote data
+        intent = _resolve_intent_unified(text, button_id, current_flow.flow_type)
+        if intent in (Intent.UNKNOWN, Intent.QUOTE_REQUEST, Intent.PRODUCT_INFO):
+            extracted = _extract_fields_from_text(text)
+            if _detect_no_measurements(text):
+                current_flow.no_measurements = True
+            if extracted or _detect_no_measurements(text):
+                logger.info(
+                    "quote_data_collected  phone=%s  extracted=%d  no_measurements=%s",
+                    phone, len(extracted), current_flow.no_measurements,
+                )
+                return _handle_quote(phone, text)
+    
+    if current_flow.flow_type == "visit":
+        # If the user isn't switching to a completely different intent, treat as
+        # continued visit data
+        intent = _resolve_intent_unified(text, button_id, current_flow.flow_type)
+        if intent in (Intent.UNKNOWN, Intent.TECHNICAL_VISIT, Intent.PRODUCT_INFO):
+            extracted = _extract_fields_from_text(text)
+            if extracted:
+                logger.info(
+                    "visit_data_collected  phone=%s  extracted=%d",
+                    phone, len(extracted),
+                )
+                return _handle_technical_visit(phone, text)
+    
+    # Priority 5: General intent resolution (FAQ, etc.)
     intent = _resolve_intent_unified(text, button_id, current_flow.flow_type)
     
     logger.info(
         "resolved_intent  phone=%s  intent=%s  source=%s",
         phone, intent.value, _get_intent_source(intent, button_id, normalized_text),
     )
-    
-    # If message comes from interactive button, use button_id handler
-    if button_id:
-        return _handle_button_click(phone, button_id)
-
-    # Check if user is in an active quote flow and sends data (not a new intent)
-    if current_flow.flow_type == "quote":
-        # If the user isn't switching to a completely different intent, treat as
-        # continued quote data
-        if intent in (Intent.UNKNOWN, Intent.QUOTE_REQUEST, Intent.PRODUCT_INFO):
-            extracted = _extract_fields_from_text(text)
-            if _detect_no_measurements(text):
-                current_flow.no_measurements = True
-            if extracted or _detect_no_measurements(text):
-                return _handle_quote(phone, text)
 
     if intent == Intent.ESCALATE:
         return _handle_explicit_escalation(phone)

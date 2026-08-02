@@ -76,12 +76,24 @@ MENU_ID_QUOTE = "menu_quote"
 MENU_ID_VISIT = "menu_visit"
 MENU_ID_HUMAN = "menu_human"
 
+# Flow-specific button IDs
+QUOTE_NO_MEASUREMENTS = "quote_no_measurements"
+QUOTE_SCHEDULE_VISIT = "quote_schedule_visit"
+QUOTE_HUMAN_HELP = "quote_human_help"
+
 # Map button IDs directly to intents (bypass classifier)
 BUTTON_ID_TO_INTENT: Dict[str, Intent] = {
     MENU_ID_PRODUCTS: Intent.PRODUCT_INFO,
     MENU_ID_QUOTE: Intent.QUOTE_REQUEST,
     MENU_ID_VISIT: Intent.TECHNICAL_VISIT,
     MENU_ID_HUMAN: Intent.ESCALATE,
+}
+
+# Flow-specific button IDs that should be handled within active flows
+FLOW_BUTTON_IDS = {
+    QUOTE_NO_MEASUREMENTS: "quote",
+    QUOTE_SCHEDULE_VISIT: "quote",
+    QUOTE_HUMAN_HELP: "quote",
 }
 
 # Text aliases for normalized text matching (bypass classifier)
@@ -109,6 +121,14 @@ TEXT_ALIASES: Dict[str, Intent] = {
     "humano": Intent.ESCALATE,
     "hablar con asesor": Intent.ESCALATE,
     "persona real": Intent.ESCALATE,
+}
+
+# Flow-specific text aliases (handled within active flows)
+FLOW_TEXT_ALIASES: Dict[str, str] = {
+    # Quote flow aliases
+    "no tengo medidas": "no_measurements",
+    "no se las medidas": "no_measurements",
+    "sin medidas": "no_measurements",
 }
 
 
@@ -176,7 +196,7 @@ BTN_PRODUCTOS = {"id": MENU_ID_PRODUCTS, "title": "Info de productos"}
 BTN_COTIZACION = {"id": MENU_ID_QUOTE, "title": "Cotización"}
 BTN_VISITA = {"id": MENU_ID_VISIT, "title": "Agendar visita"}
 BTN_ASESOR = {"id": MENU_ID_HUMAN, "title": "Hablar con asesor"}
-BTN_SIN_MEDIDAS = {"id": "quote_sin_medidas", "title": "No tengo medidas"}
+BTN_SIN_MEDIDAS = {"id": QUOTE_NO_MEASUREMENTS, "title": "No tengo medidas"}
 
 # Fallback offered whenever an intent has no specific set
 DEFAULT_BUTTONS: List[Dict[str, str]] = [BTN_PRODUCTOS, BTN_COTIZACION, BTN_VISITA]

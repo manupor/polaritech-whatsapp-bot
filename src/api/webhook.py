@@ -28,6 +28,7 @@ from src.services.persistence_service import (
     persist_outbound,
 )
 from src.services.response_service import handle_message, register_image_analysis
+from src.state.conversation_store import conversation_store
 from src.services.welcome_service import maybe_send_welcome
 from src.services.whatsapp_service import whatsapp_client
 from src.services.vision_service import vision_service
@@ -244,6 +245,10 @@ async def _process_message(
             (wa_msg.image.caption or "")[:80],
         )
 
+        # Restore flow state to check if we're in an active flow
+        hydrate_flow(sender)
+        current_flow = conversation_store.get_flow(sender)
+        
         # Persist inbound image so the conversation stays active (no re-greeting)
         image_incoming = IncomingMessage(
             phone_number=sender,
@@ -253,11 +258,30 @@ async def _process_message(
             timestamp=wa_msg.timestamp,
         )
         persist_inbound(image_incoming, wa_message_id=msg_id, message_type="image")
+        
+        logger.info(
+            "image_flow_check  phone=%s  active_flow=%s",
+            sender, current_flow.flow_type or 'idle',
+        )
 
-        # Restore flow state so the photo counts toward the active flow
-        hydrate_flow(sender)
+        # If in active visit flow, mark fotografias and continue flow (skip vision description)
+        if current_flow.flow_type == "visit":
+            current_flow.merge({"fotografias": "recibidas"})
+            logger.info(
+                "visit_image_marked  phone=%s  fotografias=recibidas",
+                sender,
+            )
+            # Continue visit flow by calling handle_message with the caption
+            bot_response = handle_message(image_incoming)
+            result = await whatsapp_client.send_text(
+                sender, bot_response.reply_text
+            )
+            persist_outbound(
+                bot_response, wa_message_id=result.message_id or None
+            )
+            return
 
-        # Download image from WhatsApp Media API
+        # Download image from WhatsApp Media API for other flows or general use
         logger.info("vision_step1_get_media_url  media_id=%s", wa_msg.image.id)
         image_url = await _get_whatsapp_media_url(wa_msg.image.id)
         if image_url:
