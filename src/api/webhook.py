@@ -10,9 +10,11 @@ Production-safe:
   - Outbound failures are logged but never crash the server
 """
 
-import httpx
+import json
 import logging
 from typing import Dict, Optional
+
+import httpx
 
 from fastapi import APIRouter, Query, Request, Response
 
@@ -230,6 +232,16 @@ async def _process_message(
             (wa_msg.image.caption or "")[:80],
         )
 
+        # Persist inbound image so the conversation stays active (no re-greeting)
+        image_incoming = IncomingMessage(
+            phone_number=sender,
+            sender_name=sender_name,
+            message_id=msg_id,
+            text=wa_msg.image.caption or "[imagen]",
+            timestamp=wa_msg.timestamp,
+        )
+        persist_inbound(image_incoming, wa_message_id=msg_id, message_type="image")
+
         # Download image from WhatsApp Media API
         logger.info("vision_step1_get_media_url  media_id=%s", wa_msg.image.id)
         image_url = await _get_whatsapp_media_url(wa_msg.image.id)
@@ -247,7 +259,8 @@ async def _process_message(
                     f"{analysis['description']}\n\n"
                     f"¿Puedes confirmar si esta información es correcta o agregar más detalles?"
                 )
-                await whatsapp_client.send_text(sender, reply_text)
+                result = await whatsapp_client.send_text(sender, reply_text)
+                _persist_image_reply(sender, reply_text, result.message_id or None)
                 return
             else:
                 logger.warning("vision_step3_analysis_failed  vision_service returned None")
@@ -256,11 +269,12 @@ async def _process_message(
 
         # Fallback if vision analysis fails
         logger.info("vision_fallback  sending manual request message")
-        await whatsapp_client.send_text(
-            sender,
+        fallback_text = (
             "Gracias por la imagen. Por el momento no puedo procesar visualmente la foto, "
             "pero puedes describirme lo que necesitas y con gusto te ayudo."
         )
+        result = await whatsapp_client.send_text(sender, fallback_text)
+        _persist_image_reply(sender, fallback_text, result.message_id or None)
         return
 
     # ── Document messages — log metadata, reply with limitation ──────
@@ -288,6 +302,47 @@ def _is_human_takeover(phone_number: str) -> bool:
         return repo.is_bot_paused(db, phone_number)
     finally:
         db.close()
+
+
+def _persist_image_reply(
+    phone_number: str, reply_text: str, wa_message_id: Optional[str]
+) -> None:
+    """
+    Log the outbound image analysis reply and refresh the conversation snapshot
+    so the welcome flow does not greet again mid-conversation.
+    """
+    try:
+        db = get_db()
+        try:
+            repo.log_message(
+                db,
+                direction="outbound",
+                phone_number=phone_number,
+                message_type="text",
+                text=reply_text,
+                wa_message_id=wa_message_id,
+                intent="image_analysis",
+            )
+            snap = repo.get_snapshot_by_phone(db, phone_number)
+            repo.upsert_snapshot(
+                db,
+                phone_number=phone_number,
+                current_intent=snap.current_intent if snap else "image_analysis",
+                flow_type=snap.flow_type if snap else None,
+                collected_fields=json.loads(snap.collected_fields_json)
+                if snap and snap.collected_fields_json
+                else {},
+                missing_fields=json.loads(snap.missing_fields_json)
+                if snap and snap.missing_fields_json
+                else [],
+                needs_human=bool(snap.needs_human) if snap else False,
+                last_bot_response=reply_text[:2000],
+            )
+            db.commit()
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("persist_image_reply failed for %s", phone_number)
 
 
 async def _get_whatsapp_media_url(media_id: str) -> Optional[str]:
