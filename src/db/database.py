@@ -68,43 +68,10 @@ if IS_SQLITE:
 
 
 def init_db() -> None:
-    """Create all tables that don't exist yet and add missing columns."""
+    """Create all tables that don't exist yet."""
     from src.db.models import Base  # noqa: F811
     Base.metadata.create_all(bind=engine)
-    
-    # Add flow_status column to conversation_snapshots if it doesn't exist
-    _ensure_flow_status_column()
-    
     logger.info("Database tables initialised  url=%s", _safe_url())
-
-
-def _ensure_flow_status_column() -> None:
-    """Add flow_status column to conversation_snapshots if it doesn't exist."""
-    try:
-        with engine.connect() as conn:
-            # Check if column exists
-            if IS_SQLITE:
-                result = conn.execute(
-                    "SELECT COUNT(*) FROM pragma_table_info('conversation_snapshots') WHERE name='flow_status'"
-                )
-            else:
-                result = conn.execute(
-                    "SELECT COUNT(*) FROM information_schema.columns "
-                    "WHERE table_name='conversation_snapshots' AND column_name='flow_status'"
-                )
-            
-            column_exists = result.scalar() > 0
-            
-            if not column_exists:
-                logger.info("Adding flow_status column to conversation_snapshots")
-                if IS_SQLITE:
-                    conn.execute("ALTER TABLE conversation_snapshots ADD COLUMN flow_status VARCHAR(20) DEFAULT 'idle'")
-                else:
-                    conn.execute("ALTER TABLE conversation_snapshots ADD COLUMN flow_status VARCHAR(20) DEFAULT 'idle'")
-                conn.commit()
-                logger.info("flow_status column added successfully")
-    except Exception as e:
-        logger.warning("Could not add flow_status column: %s", e)
 
 
 def get_db() -> Session:

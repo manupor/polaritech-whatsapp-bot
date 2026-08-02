@@ -115,7 +115,6 @@ def upsert_snapshot(
     phone_number: str,
     current_intent: Optional[str] = None,
     flow_type: Optional[str] = None,
-    flow_status: Optional[str] = None,
     collected_fields: Optional[Dict[str, Any]] = None,
     missing_fields: Optional[List[str]] = None,
     needs_human: bool = False,
@@ -130,8 +129,6 @@ def upsert_snapshot(
     if snap:
         snap.current_intent = current_intent
         snap.flow_type = flow_type or ""
-        if flow_status:
-            snap.flow_status = flow_status
         snap.collected_fields_json = json.dumps(collected_fields or {}, ensure_ascii=False)
         snap.missing_fields_json = json.dumps(missing_fields or [], ensure_ascii=False)
         snap.needs_human = 1 if needs_human else 0
@@ -144,7 +141,6 @@ def upsert_snapshot(
             phone_number=phone_number,
             current_intent=current_intent,
             flow_type=flow_type or "",
-            flow_status=flow_status or "idle",
             collected_fields_json=json.dumps(collected_fields or {}, ensure_ascii=False),
             missing_fields_json=json.dumps(missing_fields or [], ensure_ascii=False),
             needs_human=1 if needs_human else 0,

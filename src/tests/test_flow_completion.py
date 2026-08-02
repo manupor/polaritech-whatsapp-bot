@@ -112,7 +112,7 @@ def test_handle_message_with_button_id():
 
 
 def test_hydrate_flow_skips_completed_flows():
-    """Test that hydrate_flow does not revive completed flows."""
+    """Test that hydrate_flow does not revive flows that were cleared."""
     from src.services.persistence_service import hydrate_flow
     from src.db.database import get_db
     from src.db import repositories as repo
@@ -121,28 +121,27 @@ def test_hydrate_flow_skips_completed_flows():
     phone = "+50612345678"
     conversation_store.clear(phone)
 
-    # Create a snapshot with completed status
+    # Create a snapshot with flow_type but no collected fields (simulating cleared flow)
     db = get_db()
     try:
         repo.upsert_snapshot(
             db,
             phone_number=phone,
             current_intent="quote_request",
-            flow_type="quote",
-            flow_status="completed",  # This is the key
-            collected_fields={"provincia": "San José", "zona": "Escazú"},
+            flow_type="",  # Empty flow_type means flow was cleared
+            collected_fields={},
             missing_fields=[],
             needs_human=False,
         )
         db.commit()
 
-        # Try to hydrate - should skip because flow is completed
+        # Try to hydrate - should skip because flow_type is empty
         hydrate_flow(phone)
 
         # Flow should NOT be revived in memory
         flow = conversation_store.get_flow(phone)
-        assert flow.flow_type is None or flow.flow_type == "", "Flow should not be revived when completed"
-        assert len(flow.collected) == 0, "Collected fields should not be restored when completed"
+        assert flow.flow_type is None or flow.flow_type == "", "Flow should not be revived when flow_type is empty"
+        assert len(flow.collected) == 0, "Collected fields should not be restored when flow_type is empty"
     finally:
         db.close()
         # Cleanup
@@ -157,7 +156,7 @@ def test_hydrate_flow_skips_completed_flows():
 
 
 def test_persist_outbound_sets_completed_status():
-    """Test that persist_outbound sets flow_status to completed when no missing fields."""
+    """Test that persist_outbound persists empty flow_type when flow was cleared."""
     from src.services.persistence_service import persist_outbound
     from src.db.database import get_db
     from src.db import repositories as repo
@@ -166,11 +165,15 @@ def test_persist_outbound_sets_completed_status():
     phone = "+50612345678"
     conversation_store.clear(phone)
 
-    # Set up a completed flow in memory
+    # Flow should be cleared before persisting (as done in handlers)
+    # Set up a flow, then clear it to simulate completion
     conversation_store.set_flow(phone, "quote")
     flow = conversation_store.get_flow(phone)
     flow.merge({"provincia": "San José", "zona": "Escazú", "necesidad": "calor", "fotografias": "recibidas"})
-    flow.no_measurements = True  # All fields collected
+    flow.no_measurements = True
+    
+    # Clear flow to simulate completion (as done in _handle_quote)
+    conversation_store.clear_flow(phone)
 
     # Create a response that would trigger escalation
     from src.services.escalation_service import build_escalation_payload
@@ -190,12 +193,12 @@ def test_persist_outbound_sets_completed_status():
     # Persist
     persist_outbound(response)
 
-    # Check that snapshot has completed status
+    # Check that snapshot has empty flow_type (flow was cleared)
     db = get_db()
     try:
         snap = repo.get_snapshot_by_phone(db, phone)
         assert snap is not None, "Snapshot should exist"
-        assert snap.flow_status == "completed", f"Flow status should be completed, got {snap.flow_status}"
+        assert snap.flow_type == "" or snap.flow_type is None, f"Flow type should be empty, got {snap.flow_type}"
     finally:
         db.close()
         # Cleanup

@@ -232,15 +232,6 @@ async def _process_message(
 
         # Persist outbound in background (don't block webhook)
         persist_outbound(bot_response, wa_message_id=result.message_id or None)
-        
-        # If flow was completed, clear it after persistence
-        if bot_response.escalated:
-            from src.state.conversation_store import conversation_store
-            conversation_store.clear_flow(bot_response.phone_number)
-            logger.info(
-                "flow_cleared_after_persistence  phone=%s  intent=%s",
-                bot_response.phone_number, bot_response.intent.value,
-            )
         return
 
     # ── Image messages — process with vision service ──

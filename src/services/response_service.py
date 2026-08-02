@@ -281,8 +281,8 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
             Intent.QUOTE_REQUEST, flow, summary="Cotización lista para seguimiento",
         )
         conversation_store.add_turn(phone, "bot", reply)
-        # Don't clear flow yet - let persist_outbound capture completed state
-        # Flow will be cleared after persistence in webhook
+        # Mark flow as completed by clearing it - will be persisted then cleared in webhook
+        conversation_store.clear_flow(phone)
         return BotResponse(
             phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST,
             escalated=True, escalation=escalation,
@@ -328,7 +328,8 @@ def _handle_warranty(phone: str, text: str) -> BotResponse:
             "revisará su caso y se comunicará con usted a la brevedad."
         )
         conversation_store.add_turn(phone, "bot", reply)
-        # Don't clear flow yet - let persist_outbound capture completed state
+        # Mark flow as completed by clearing it
+        conversation_store.clear_flow(phone)
         return BotResponse(
             phone_number=phone, reply_text=reply, intent=Intent.WARRANTY_CLAIM,
             escalated=True, escalation=escalation,

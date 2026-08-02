@@ -32,14 +32,6 @@ def hydrate_flow(phone_number: str) -> None:
             if not snap or not snap.flow_type:
                 return
 
-            # Don't revive completed flows - they should stay idle
-            if snap.flow_status == "completed":
-                logger.info(
-                    "flow_already_completed  phone=%s  flow=%s  status=%s",
-                    phone_number, snap.flow_type, snap.flow_status,
-                )
-                return
-
             conversation_store.set_flow(phone_number, snap.flow_type)
 
             collected = _load_json_dict(snap.collected_fields_json)
@@ -57,8 +49,8 @@ def hydrate_flow(phone_number: str) -> None:
                 conversation_store.get_flow(phone_number).no_measurements = True
 
             logger.info(
-                "flow_hydrated  phone=%s  flow=%s  status=%s  collected=%d",
-                phone_number, snap.flow_type, snap.flow_status, len(collected),
+                "flow_hydrated  phone=%s  flow=%s  collected=%d",
+                phone_number, snap.flow_type, len(collected),
             )
         finally:
             db.close()
@@ -137,15 +129,11 @@ def persist_outbound(
             collected = dict(flow.collected) if flow.flow_type else {}
             missing = _flow_missing(flow)
 
-            # Determine flow status: completed if no missing fields, otherwise collecting
-            flow_status = "completed" if not missing and flow.flow_type else "collecting" if flow.flow_type else "idle"
-
             repo.upsert_snapshot(
                 db,
                 phone_number=response.phone_number,
                 current_intent=response.intent.value,
                 flow_type=flow.flow_type or None,
-                flow_status=flow_status,
                 collected_fields=collected,
                 missing_fields=missing,
                 needs_human=response.escalated,
