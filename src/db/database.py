@@ -12,22 +12,53 @@ from typing import AsyncGenerator
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-engine = create_engine(
-    settings.database_url,
-    echo=False,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
-)
+
+def _normalize_url(url: str) -> str:
+    """
+    Normalize database URLs for SQLAlchemy 2.x.
+
+    Providers like Neon, Supabase and Heroku hand out `postgres://` URLs which
+    SQLAlchemy no longer recognises, and `postgresql://` defaults to psycopg2.
+    We force the psycopg (v3) driver used in requirements.txt.
+    """
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+
+DATABASE_URL = _normalize_url(settings.database_url)
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
+
+if IS_SQLITE:
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    # Serverless (Vercel) creates a new process per invocation, so connection
+    # pooling across requests is useless and exhausts Postgres connections.
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        poolclass=NullPool,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": 10},
+    )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
 # Enable WAL mode for SQLite to allow concurrent reads
-if "sqlite" in settings.database_url:
+if IS_SQLITE:
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_conn, connection_record):  # type: ignore
         cursor = dbapi_conn.cursor()
@@ -50,7 +81,7 @@ def get_db() -> Session:
 
 def _safe_url() -> str:
     """Return DB URL with password masked for logging."""
-    url = settings.database_url
+    url = DATABASE_URL
     if "@" in url:
         parts = url.split("@")
         return "***@" + parts[-1]

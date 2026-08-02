@@ -233,16 +233,35 @@ SELECT * FROM lead_records ORDER BY created_at DESC;
 SELECT * FROM conversation_snapshots WHERE phone_number = '+50688001234';
 ```
 
-### Upgrade to PostgreSQL
+### PostgreSQL (required for Vercel / serverless)
 
+SQLite **cannot** be used on Vercel: the filesystem is ephemeral, so the database
+is wiped on every cold start. The bot then loses conversation context and greets
+returning users again mid-conversation.
+
+The `psycopg` (v3) driver is already in `requirements.txt`, and
+`src/db/database.py` normalizes provider URLs automatically, so both
+`postgres://` and `postgresql://` connection strings work as-is.
+
+1. Create a free Postgres database:
+   - **Neon** — https://neon.tech (recommended, serverless-friendly)
+   - **Supabase** — https://supabase.com
+2. Copy the connection string, e.g.
+   ```
+   postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+   ```
+3. Set `DATABASE_URL` to that value in Vercel → Settings → Environment Variables
+   (Production and Preview), then redeploy.
+4. Tables are created automatically on the first cold start by `init_db()`.
+
+Connections use `NullPool` in non-SQLite mode because each serverless invocation
+runs in its own process, so cross-request pooling only exhausts Postgres
+connection limits.
+
+Local development can stay on SQLite:
 ```bash
 # .env
-DATABASE_URL=postgresql://user:pass@localhost:5432/polaritech
-```
-
-Install the driver:
-```bash
-pip install psycopg2-binary
+DATABASE_URL=sqlite:///polaritech.db
 ```
 
 ## Internal Ops API
