@@ -431,6 +431,17 @@ def _handle_technical_visit(phone: str, text: str) -> BotResponse:
 
 
 def _handle_competitor(phone: str, text: str) -> BotResponse:
+    # First check if this matches a brand intent (brand_3m, brand_general, competitor_cheaper_3m)
+    brand_answer = find_answer(text)
+    if brand_answer:
+        # If it's a brand intent, use that answer instead of generic competitor response
+        conversation_store.add_turn(phone, "bot", brand_answer)
+        return BotResponse(
+            phone_number=phone, reply_text=brand_answer, intent=Intent.COMPETITOR,
+            buttons=_get_buttons_for_intent(Intent.COMPETITOR),
+        )
+    
+    # Fallback to original competitor logic
     t = text.lower()
     if "3m" in t:
         reply = TEMPLATES["competitor_3m"]

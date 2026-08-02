@@ -6,6 +6,17 @@ import pytest
 from src.services.faq_service import find_answer
 
 
+def test_brand_general_que_marcas_with_sign():
+    """Test general brand question with question mark sign."""
+    answer = find_answer("¿Qué marcas trabajan?")
+    assert answer is not None
+    assert "Actualmente no trabajamos con 3M" in answer
+    assert "Polaritech trabaja con tecnologías seleccionadas" in answer
+    # Ensure it does NOT return the price comparison response
+    assert "barato" not in answer.lower()
+    assert "es posible que encuentre" not in answer.lower()
+
+
 def test_brand_3m_exact():
     """Test exact 3M question returns brand_3m answer."""
     answer = find_answer("¿Trabajan con 3M?")

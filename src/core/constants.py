@@ -48,6 +48,7 @@ def normalize_text(text: str) -> str:
     - lowercase
     - trim
     - remove accents/tildes
+    - remove punctuation (¿, ?, ¡, !)
     - collapse multiple spaces
     """
     if not text:
@@ -59,6 +60,10 @@ def normalize_text(text: str) -> str:
     # Remove accents (normalize to NFD and remove combining marks)
     text = unicodedata.normalize('NFD', text)
     text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')
+    
+    # Remove Spanish punctuation marks
+    text = text.replace('¿', '').replace('?', '')
+    text = text.replace('¡', '').replace('!', '')
     
     # Trim
     text = text.strip()

@@ -106,20 +106,21 @@ BRAND_INTENTS = {
 
 def _check_brand_intents(query: str) -> Optional[str]:
     """Check if query matches a brand-related intent bucket.
-    Prioritizes longer, more specific aliases over shorter ones."""
+    Prioritizes brand_3m and brand_general before competitor_cheaper_3m."""
     q_norm = _normalize(query)
     
-    # Sort all aliases by length (descending) to match more specific ones first
-    all_aliases = []
-    for intent_name, intent_data in BRAND_INTENTS.items():
-        for alias in intent_data["aliases"]:
-            all_aliases.append((alias, intent_data["answer"]))
+    # Process in priority order: brand_3m, brand_general, competitor_cheaper_3m, competitor_comparison
+    priority_order = ["brand_3m", "brand_general", "competitor_cheaper_3m", "competitor_comparison"]
     
-    all_aliases.sort(key=lambda x: len(x[0]), reverse=True)
+    for intent_name in priority_order:
+        intent_data = BRAND_INTENTS[intent_name]
+        # Sort aliases by length (descending) to match more specific ones first
+        sorted_aliases = sorted(intent_data["aliases"], key=len, reverse=True)
+        
+        for alias in sorted_aliases:
+            if alias in q_norm:
+                return intent_data["answer"]
     
-    for alias, answer in all_aliases:
-        if alias in q_norm:
-            return answer
     return None
 
 
