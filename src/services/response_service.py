@@ -406,6 +406,68 @@ def _handle_unknown(phone: str, text: str) -> BotResponse:
     )
 
 
+# ── Image analysis integration ───────────────────────────────────────────────
+
+_FLOW_INTENTS = {
+    "quote": Intent.QUOTE_REQUEST,
+    "warranty": Intent.WARRANTY_CLAIM,
+    "visit": Intent.TECHNICAL_VISIT,
+}
+
+
+def register_image_analysis(phone: str, description: str) -> BotResponse:
+    """
+    Record a photo (and its vision analysis) in the caller's active flow.
+
+    Photos are a required field for the quote, warranty and visit flows, so the
+    image counts as `fotografias` and any measurements the model found are merged
+    in. The reply then continues the flow instead of restarting the conversation.
+    """
+    flow = conversation_store.get_flow(phone)
+    if not flow.flow_type:
+        flow = conversation_store.set_flow(phone, "quote")
+
+    conversation_store.add_turn(phone, "user", "[imagen enviada]")
+
+    updates = {"fotografias": "recibidas"}
+    extracted = _extract_fields_from_text(description)
+    if "medidas" in extracted:
+        updates["medidas"] = extracted["medidas"]
+    flow.merge(updates)
+
+    intent = _FLOW_INTENTS.get(flow.flow_type, Intent.QUOTE_REQUEST)
+
+    parts = [f"Gracias por la imagen. Esto es lo que detecté:\n\n{description}"]
+
+    if flow.flow_type == "quote":
+        missing = flow.quote_missing()
+    elif flow.flow_type == "warranty":
+        missing = flow.warranty_missing()
+    else:
+        missing = flow.visit_missing()
+
+    if missing:
+        parts.append(
+            f"Para continuar con su solicitud, aún necesito:\n"
+            f"{_format_missing_fields(missing)}"
+        )
+    else:
+        parts.append(
+            "Con esto tengo la información necesaria. "
+            "Un asesor le contactará para confirmar los detalles."
+        )
+
+    reply = "\n\n".join(parts)
+    conversation_store.add_turn(phone, "bot", reply)
+
+    return BotResponse(
+        phone_number=phone,
+        reply_text=reply,
+        intent=intent,
+        buttons=_get_buttons_for_intent(intent),
+    )
+
+
 # ── Main orchestrator ────────────────────────────────────────────────────────
 
 def handle_message(msg: IncomingMessage) -> BotResponse:

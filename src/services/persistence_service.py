@@ -19,6 +19,71 @@ from src.state.conversation_store import conversation_store
 logger = logging.getLogger(__name__)
 
 
+def hydrate_flow(phone_number: str) -> None:
+    """
+    Restore in-memory flow state from the DB snapshot.
+
+    `conversation_store` lives in process memory, so on serverless platforms
+    (Vercel) every request starts with an empty store and the bot forgets which
+    flow the user was in. Hydrating from the persisted snapshot keeps context.
+    """
+    try:
+        flow = conversation_store.get_flow(phone_number)
+        if flow.flow_type or flow.collected:
+            return  # already populated in this process
+
+        db = get_db()
+        try:
+            snap = repo.get_snapshot_by_phone(db, phone_number)
+            if not snap or not snap.flow_type:
+                return
+
+            conversation_store.set_flow(phone_number, snap.flow_type)
+
+            collected = _load_json_dict(snap.collected_fields_json)
+            if collected:
+                conversation_store.update_flow(phone_number, collected)
+
+            # "medidas" absent from both collected and missing means the user
+            # already told us they have no measurements.
+            missing = _load_json_list(snap.missing_fields_json)
+            if (
+                snap.flow_type == "quote"
+                and "medidas" not in collected
+                and "medidas" not in missing
+            ):
+                conversation_store.get_flow(phone_number).no_measurements = True
+
+            logger.info(
+                "flow_hydrated  phone=%s  flow=%s  collected=%d",
+                phone_number, snap.flow_type, len(collected),
+            )
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("hydrate_flow failed for %s", phone_number)
+
+
+def _load_json_dict(raw: Optional[str]) -> dict:
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+        return value if isinstance(value, dict) else {}
+    except (ValueError, TypeError):
+        return {}
+
+
+def _load_json_list(raw: Optional[str]) -> list:
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+        return value if isinstance(value, list) else []
+    except (ValueError, TypeError):
+        return []
+
+
 def persist_inbound(
     msg: IncomingMessage,
     *,

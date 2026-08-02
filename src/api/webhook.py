@@ -10,7 +10,6 @@ Production-safe:
   - Outbound failures are logged but never crash the server
 """
 
-import json
 import logging
 from typing import Dict, Optional
 
@@ -23,8 +22,12 @@ from src.schemas.chatbot import IncomingMessage
 from src.schemas.whatsapp import WhatsAppMessage, WhatsAppWebhookPayload
 from src.db.database import get_db
 from src.db import repositories as repo
-from src.services.persistence_service import persist_inbound, persist_outbound
-from src.services.response_service import handle_message
+from src.services.persistence_service import (
+    hydrate_flow,
+    persist_inbound,
+    persist_outbound,
+)
+from src.services.response_service import handle_message, register_image_analysis
 from src.services.welcome_service import maybe_send_welcome
 from src.services.whatsapp_service import whatsapp_client
 from src.services.vision_service import vision_service
@@ -153,6 +156,9 @@ async def _process_message(
             logger.info("bot_paused  msg_id=%s  sender=%s  reason=human_takeover", msg_id, sender)
             return
 
+        # Restore flow state from DB (serverless resets in-memory state)
+        hydrate_flow(sender)
+
         bot_response = handle_message(incoming)
         result = await whatsapp_client.send_text(
             bot_response.phone_number, bot_response.reply_text,
@@ -193,6 +199,9 @@ async def _process_message(
                 msg_id, sender,
             )
             return
+
+        # Restore flow state from DB (serverless resets in-memory state)
+        hydrate_flow(sender)
 
         bot_response = handle_message(incoming)
 
@@ -242,6 +251,9 @@ async def _process_message(
         )
         persist_inbound(image_incoming, wa_message_id=msg_id, message_type="image")
 
+        # Restore flow state so the photo counts toward the active flow
+        hydrate_flow(sender)
+
         # Download image from WhatsApp Media API
         logger.info("vision_step1_get_media_url  media_id=%s", wa_msg.image.id)
         image_url = await _get_whatsapp_media_url(wa_msg.image.id)
@@ -253,28 +265,30 @@ async def _process_message(
             )
             if analysis:
                 logger.info("vision_step3_analysis_success  description=%s", analysis['description'][:100])
-                # Create a text message with the analysis
-                reply_text = (
-                    f"Gracias por la imagen. He analizado la foto y detecté:\n\n"
-                    f"{analysis['description']}\n\n"
-                    f"¿Puedes confirmar si esta información es correcta o agregar más detalles?"
+                # Register the photo in the active flow and ask what's still missing
+                bot_response = register_image_analysis(
+                    sender, analysis["description"]
                 )
-                result = await whatsapp_client.send_text(sender, reply_text)
-                _persist_image_reply(sender, reply_text, result.message_id or None)
+                result = await whatsapp_client.send_text(
+                    sender, bot_response.reply_text
+                )
+                persist_outbound(
+                    bot_response, wa_message_id=result.message_id or None
+                )
                 return
             else:
                 logger.warning("vision_step3_analysis_failed  vision_service returned None")
         else:
             logger.warning("vision_step2_url_failed  could not get media URL")
 
-        # Fallback if vision analysis fails
+        # Fallback if vision analysis fails — still credit the photo to the flow
         logger.info("vision_fallback  sending manual request message")
-        fallback_text = (
-            "Gracias por la imagen. Por el momento no puedo procesar visualmente la foto, "
-            "pero puedes describirme lo que necesitas y con gusto te ayudo."
+        bot_response = register_image_analysis(
+            sender,
+            "No pude analizar la foto automáticamente, pero ya quedó registrada.",
         )
-        result = await whatsapp_client.send_text(sender, fallback_text)
-        _persist_image_reply(sender, fallback_text, result.message_id or None)
+        result = await whatsapp_client.send_text(sender, bot_response.reply_text)
+        persist_outbound(bot_response, wa_message_id=result.message_id or None)
         return
 
     # ── Document messages — log metadata, reply with limitation ──────
@@ -302,47 +316,6 @@ def _is_human_takeover(phone_number: str) -> bool:
         return repo.is_bot_paused(db, phone_number)
     finally:
         db.close()
-
-
-def _persist_image_reply(
-    phone_number: str, reply_text: str, wa_message_id: Optional[str]
-) -> None:
-    """
-    Log the outbound image analysis reply and refresh the conversation snapshot
-    so the welcome flow does not greet again mid-conversation.
-    """
-    try:
-        db = get_db()
-        try:
-            repo.log_message(
-                db,
-                direction="outbound",
-                phone_number=phone_number,
-                message_type="text",
-                text=reply_text,
-                wa_message_id=wa_message_id,
-                intent="image_analysis",
-            )
-            snap = repo.get_snapshot_by_phone(db, phone_number)
-            repo.upsert_snapshot(
-                db,
-                phone_number=phone_number,
-                current_intent=snap.current_intent if snap else "image_analysis",
-                flow_type=snap.flow_type if snap else None,
-                collected_fields=json.loads(snap.collected_fields_json)
-                if snap and snap.collected_fields_json
-                else {},
-                missing_fields=json.loads(snap.missing_fields_json)
-                if snap and snap.missing_fields_json
-                else [],
-                needs_human=bool(snap.needs_human) if snap else False,
-                last_bot_response=reply_text[:2000],
-            )
-            db.commit()
-        finally:
-            db.close()
-    except Exception:
-        logger.exception("persist_image_reply failed for %s", phone_number)
 
 
 async def _get_whatsapp_media_url(media_id: str) -> Optional[str]:
