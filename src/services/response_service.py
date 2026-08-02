@@ -268,6 +268,69 @@ def _has_explicit_flow_change(text: str) -> Optional[Intent]:
     return None
 
 
+# Patterns that indicate any kind of length unit (meters / feet / etc.)
+_MEASURE_UNIT = r"(?:m|mt|mts|metro|metros|m²|m2|m^2|pies|pie|pulgadas|pulgada)?"
+
+
+def _extract_measurements(text: str) -> Optional[str]:
+    """Extract measurements from free text in many spoken/abbreviated forms.
+
+    Recognised patterns:
+      - 3 x 5 / 3 x 5 m / 3x5 / 3 x 5 mts
+      - 3 metros x 5 metros / 3 mts x 5 mts
+      - 3 metros de ancho por 5 de largo
+      - 3 de ancho x 5 de alto
+      - 3 ancho 5 largo
+      - 3 m de ancho x 5 m de largo
+    Returns a normalised string like "3 × 5 metros" or None.
+    """
+    t = text.lower().strip()
+    t = re.sub(r"[\*\·\,]", " ", t)  # comma used as decimal in some locales
+    t = re.sub(r"\s+", " ", t)
+
+    # 1. Explicit N [unit] x N [unit] with optional ancho/largo labels
+    #    e.g. "3 metros x 5 metros", "3 m x 5 m", "3x5", "3 x 5 mts"
+    pattern1 = re.compile(
+        r"(\d+(?:[.,]\d+)?)\s*(m|mt|mts|metro|metros|m²|m2|m\^2|pies|pie|pulgadas|pulgada)?\s*"
+        r"[x×X]\s*"
+        r"(\d+(?:[.,]\d+)?)\s*(m|mt|mts|metro|metros|m²|m2|m\^2|pies|pie|pulgadas|pulgada)?"
+    )
+    m = pattern1.search(t)
+    if m:
+        a, b = m.group(1), m.group(3)
+        unit = (m.group(4) or m.group(2) or "metros").lower()
+        # normalise abbreviations to "metros" for display
+        if unit in ("m", "mt", "mts", "metro", "metros"):
+            unit = "metros"
+        return f"{a} × {b} {unit}"
+
+    # 2. "N [unit] de ancho por N [unit] de largo/alto"
+    pattern2 = re.compile(
+        r"(\d+(?:[.,]\d+)?)\s*(m|mt|mts|metro|metros|m²|m2|m\^2)?\s*"
+        r"(?:de\s+)?(?:ancho|largo|alto)?\s*(?:por|x)\s*"
+        r"(\d+(?:[.,]\d+)?)\s*(m|mt|mts|metro|metros|m²|m2|m\^2)?\s*"
+        r"(?:de\s+)?(?:ancho|largo|alto)?"
+    )
+    m = pattern2.search(t)
+    if m:
+        a, b = m.group(1), m.group(3)
+        unit = (m.group(4) or m.group(2) or "metros").lower()
+        if unit in ("m", "mt", "mts", "metro", "metros"):
+            unit = "metros"
+        return f"{a} × {b} {unit}"
+
+    # 3. "N ancho / N largo" without explicit units
+    pattern3 = re.compile(
+        r"(\d+(?:[.,]\d+)?)\s*(?:de\s+)?(?:ancho|largo|alto)\s*(?:por|y|x)?\s*"
+        r"(\d+(?:[.,]\d+)?)\s*(?:de\s+)?(?:ancho|largo|alto)"
+    )
+    m = pattern3.search(t)
+    if m:
+        return f"{m.group(1)} × {m.group(2)} metros"
+
+    return None
+
+
 def _split_compound_message(text: str) -> List[str]:
     """Split compound messages by common delimiters."""
     delimiters = ["/", "-", "•", ";", "\n"]
@@ -321,9 +384,10 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         if m2_match and "medidas" not in fields:
             fields["medidas"] = f"{m2_match.group(1)} m²"
         
-        dim_match = re.search(r"(\d+(?:[.,]\d+)?)\s*[x×X]\s*(\d+(?:[.,]\d+)?)", part_lower)
-        if dim_match and "medidas" not in fields:
-            fields["medidas"] = f"{dim_match.group(1)} × {dim_match.group(2)}"
+        # New helper: dimensions in spoken/abbreviated forms (e.g. 3 x 5, 3 mts x 5 mts)
+        dimensions = _extract_measurements(part)
+        if dimensions and "medidas" not in fields:
+            fields["medidas"] = dimensions
         
         # Need
         needs_map = {
@@ -522,6 +586,10 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
                 parts.append(recommendation)
         else:
             parts.append("Gracias por la información.")
+    
+    # Confirm the measurement that was just captured (if any)
+    if "medidas" in extracted:
+        parts.append(f"Entendí estas medidas: {extracted['medidas']}.")
     
     if flow.no_measurements:
         # Use appropriate template based on whether user has photos
