@@ -5,13 +5,23 @@ Exposes the FastAPI app for Vercel's Python runtime.
 Vercel's Python runtime does not support FastAPI lifespan events,
 so we create a minimal app here that includes the same routers
 but skips the async lifespan context manager.
+
+Vercel filesystem is read-only except /tmp, so we override DATABASE_URL
+to point to /tmp for SQLite.
 """
 
+import os
 import sys
 from pathlib import Path
 
 # Ensure project root is in sys.path so 'src' package is importable
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+_project_root = str(Path(__file__).resolve().parent.parent)
+sys.path.insert(0, _project_root)
+
+# Override SQLite path to writable /tmp on Vercel (must happen BEFORE src imports)
+_db_url = os.environ.get("DATABASE_URL", "")
+if not _db_url or "sqlite" in _db_url:
+    os.environ["DATABASE_URL"] = "sqlite:////tmp/polaritech.db"
 
 import logging  # noqa: E402
 
