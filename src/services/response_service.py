@@ -15,7 +15,7 @@ Handlers:
 
 import logging
 import re
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from src.core.constants import (
     BUTTONS_FOLLOWUP_PROMPT,
@@ -143,7 +143,36 @@ _NO_MEASUREMENT_PHRASES = [
 ]
 
 
-def _extract_fields_from_text(text: str) -> dict:
+def _detect_main_need(text: str) -> Optional[str]:
+    """Detect main need from free text with various forms.
+    Returns: 'calor', 'privacidad', 'seguridad', 'decoracion' or None."""
+    t = normalize_text(text)
+    
+    # Patterns for each need
+    if "calor" in t:
+        return "calor"
+    elif "privacidad" in t:
+        return "privacidad"
+    elif "seguridad" in t:
+        return "seguridad"
+    elif "decoracion" in t or "decoracion" in t:
+        return "decoracion"
+    
+    return None
+
+
+def _get_need_recommendation(need: str) -> str:
+    """Generate contextual recommendation based on detected need."""
+    recommendations = {
+        "calor": "Perfecto, si su prioridad es reducir calor, la línea que normalmente se recomienda es Nano Cerámica, porque está diseñada para reducir significativamente la sensación térmica.",
+        "privacidad": "Perfecto. Para privacidad diurna normalmente se recomienda Económica o Silver Espejo. Para privacidad permanente en ambos sentidos, Sand Blasting.",
+        "seguridad": "Perfecto. Para seguridad, la opción indicada es la Película de Seguridad, diseñada para ayudar a retener fragmentos en caso de rotura.",
+        "decoracion": "Perfecto. Para decoración o privacidad tipo vidrio esmerilado, Sand Blasting suele ser una opción recomendada.",
+    }
+    return recommendations.get(need, "")
+
+
+def _extract_fields_from_text(text: str) -> Dict[str, str]:
     """Best-effort extraction of quote/warranty/visit fields from free text."""
     t = text.lower()
     fields: dict = {}
@@ -308,6 +337,11 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
         flow.no_measurements = True
         extracted.pop("medidas", None)
 
+    # Detect main need from free text and generate contextual recommendation
+    main_need = _detect_main_need(text)
+    if main_need:
+        extracted["necesidad"] = main_need
+
     flow.merge(extracted)
 
     # Check if asking about price per meter
@@ -349,14 +383,26 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
             buttons=_get_post_closure_buttons("quote"),
         )
 
-    # Ask only for missing fields
-    missing = flow.quote_missing()
-    missing_text = _format_missing_fields(missing)
-
-    parts = ["Gracias por la información."]
+    # Build response with contextual recommendation if need was just provided
+    parts = []
+    
+    # Add contextual recommendation if need was detected in this message
+    if main_need:
+        recommendation = _get_need_recommendation(main_need)
+        if recommendation:
+            parts.append(recommendation)
+    else:
+        parts.append("Gracias por la información.")
+    
     if flow.no_measurements:
         parts.append(TEMPLATES["quote_no_measurements"])
-    parts.append(f"Para continuar, aún necesito:\n{missing_text}")
+    
+    # Ask only for missing fields
+    missing = flow.quote_missing()
+    if missing:
+        missing_text = _format_missing_fields(missing)
+        parts.append(f"Para ayudarle con la cotización, ahora solo necesito:\n{missing_text}")
+    
     reply = "\n\n".join(parts)
 
     conversation_store.add_turn(phone, "bot", reply)
