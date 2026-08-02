@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Escalaciones — Polaritech Ops{% endblock %}
+{% block content %}
+<h1>Escalaciones</h1>
+
+<form class="filters" method="get" action="/dashboard/escalations">
+    <select name="status">
+        <option value="">Todos los estados</option>
+        <option value="open" {{ 'selected' if filter_status == 'open' }}>Abierta</option>
+        <option value="in_progress" {{ 'selected' if filter_status == 'in_progress' }}>En progreso</option>
+        <option value="closed" {{ 'selected' if filter_status == 'closed' }}>Cerrada</option>
+    </select>
+    <select name="priority">
+        <option value="">Todas las prioridades</option>
+        <option value="high" {{ 'selected' if filter_priority == 'high' }}>Alta</option>
+        <option value="normal" {{ 'selected' if filter_priority == 'normal' }}>Normal</option>
+    </select>
+    <button type="submit">Filtrar</button>
+</form>
+
+{% if records %}
+<div class="card" style="padding:0; overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Teléfono</th>
+                <th>Intent</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th>Creado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td><a href="/dashboard/escalations/{{ r.id }}">{{ r.id }}</a></td>
+                <td>{{ r.phone_number }}</td>
+                <td>{{ r.intent }}</td>
+                <td><span class="badge badge-{{ r.priority }}">{{ r.priority }}</span></td>
+                <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+                <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No hay escalaciones con estos filtros.</p>
+</div>
+{% endif %}
+{% endblock %}

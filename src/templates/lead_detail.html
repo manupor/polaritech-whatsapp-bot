@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Lead #{{ record.id }} — Polaritech Ops{% endblock %}
+{% block content %}
+<h1>Lead #{{ record.id }}</h1>
+
+<div class="card">
+    <dl class="detail-grid">
+        <dt>Teléfono</dt>
+        <dd>{{ record.phone_number }}</dd>
+
+        <dt>Tipo</dt>
+        <dd>{{ record.lead_type }}</dd>
+
+        <dt>Provincia</dt>
+        <dd>{{ record.province or '—' }}</dd>
+
+        <dt>Zona</dt>
+        <dd>{{ record.zone or '—' }}</dd>
+
+        <dt>Medidas</dt>
+        <dd>{{ record.measurements or '—' }}</dd>
+
+        <dt>Necesidad</dt>
+        <dd>{{ record.main_need or '—' }}</dd>
+
+        <dt>Producto</dt>
+        <dd>{{ record.product_interest or '—' }}</dd>
+
+        <dt>Tiene fotos</dt>
+        <dd>{{ 'Sí' if record.has_photos else 'No' }}</dd>
+
+        <dt>Estado</dt>
+        <dd><span class="badge badge-{{ record.status }}">{{ record.status }}</span></dd>
+
+        <dt>Creado</dt>
+        <dd>{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else '-' }}</dd>
+
+        <dt>Actualizado</dt>
+        <dd>{{ record.updated_at.strftime('%Y-%m-%d %H:%M:%S') if record.updated_at else '-' }}</dd>
+    </dl>
+
+    <div class="actions">
+        {% if record.status != 'new' %}
+        <form method="post" action="/dashboard/leads/{{ record.id }}/status" style="display:inline;">
+            <input type="hidden" name="status" value="new">
+            <button class="btn btn-warning" type="submit">Nuevo</button>
+        </form>
+        {% endif %}
+        {% if record.status != 'contacted' %}
+        <form method="post" action="/dashboard/leads/{{ record.id }}/status" style="display:inline;">
+            <input type="hidden" name="status" value="contacted">
+            <button class="btn btn-primary" type="submit">Contactado</button>
+        </form>
+        {% endif %}
+        {% if record.status != 'quoted' %}
+        <form method="post" action="/dashboard/leads/{{ record.id }}/status" style="display:inline;">
+            <input type="hidden" name="status" value="quoted">
+            <button class="btn btn-warning" type="submit">Cotizado</button>
+        </form>
+        {% endif %}
+        {% if record.status != 'closed' %}
+        <form method="post" action="/dashboard/leads/{{ record.id }}/status" style="display:inline;">
+            <input type="hidden" name="status" value="closed">
+            <button class="btn btn-success" type="submit">Cerrar</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<p><a href="/dashboard/leads">&larr; Volver a leads</a></p>
+{% endblock %}

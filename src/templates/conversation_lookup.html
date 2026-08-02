@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Conversaciones — Polaritech Ops{% endblock %}
+{% block content %}
+<h1>Buscar conversación</h1>
+
+<form class="filters" method="get" action="/dashboard/conversations">
+    <input type="text" name="phone" value="{{ phone or '' }}" placeholder="Número de teléfono (ej: 50688001234)">
+    <button type="submit">Buscar</button>
+</form>
+
+{% if searched and snapshot %}
+<div class="card">
+    <h2>Conversación: {{ snapshot.phone_number }}</h2>
+
+    {% if snapshot.human_takeover %}
+    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:0.75rem;margin-bottom:1rem;">
+        <strong>Humano en control</strong> — El bot no está respondiendo automáticamente.
+    </div>
+    {% endif %}
+
+    <dl class="detail-grid">
+        <dt>Nombre</dt>
+        <dd>{{ snapshot.profile_name }}</dd>
+
+        <dt>Intent actual</dt>
+        <dd>{{ snapshot.current_intent or '—' }}</dd>
+
+        <dt>Flujo</dt>
+        <dd>{{ snapshot.flow_type or '—' }}</dd>
+
+        <dt>Campos recopilados</dt>
+        <dd>{{ collected_fields or '—' }}</dd>
+
+        <dt>Campos pendientes</dt>
+        <dd>{{ missing_fields or '—' }}</dd>
+
+        <dt>Necesita humano</dt>
+        <dd>{{ 'Sí' if snapshot.needs_human else 'No' }}</dd>
+
+        <dt>Bot activo</dt>
+        <dd><span class="badge {{ 'badge-open' if snapshot.bot_active else 'badge-closed' }}">{{ 'Sí' if snapshot.bot_active else 'No' }}</span></dd>
+
+        <dt>Takeover humano</dt>
+        <dd><span class="badge {{ 'badge-high' if snapshot.human_takeover else 'badge-open' }}">{{ 'Sí' if snapshot.human_takeover else 'No' }}</span></dd>
+
+        <dt>Última respuesta</dt>
+        <dd>{{ snapshot.last_bot_response or '—' }}</dd>
+
+        <dt>Último mensaje</dt>
+        <dd>{{ snapshot.last_message_at.strftime('%Y-%m-%d %H:%M:%S') if snapshot.last_message_at else '-' }}</dd>
+
+        <dt>Actualizado</dt>
+        <dd>{{ snapshot.updated_at.strftime('%Y-%m-%d %H:%M:%S') if snapshot.updated_at else '-' }}</dd>
+    </dl>
+
+    <div class="actions">
+        {% if not snapshot.human_takeover %}
+        <form method="post" action="/dashboard/conversations/takeover" style="display:inline;">
+            <input type="hidden" name="phone" value="{{ snapshot.phone_number }}">
+            <button class="btn btn-danger" type="submit">Tomar conversación</button>
+        </form>
+        {% else %}
+        <form method="post" action="/dashboard/conversations/resume" style="display:inline;">
+            <input type="hidden" name="phone" value="{{ snapshot.phone_number }}">
+            <button class="btn btn-success" type="submit">Reanudar bot</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/dashboard/conversations/mark-lead" style="display:inline;">
+            <input type="hidden" name="phone" value="{{ snapshot.phone_number }}">
+            <button class="btn btn-primary" type="submit">Marcar como lead</button>
+        </form>
+        <form method="post" action="/dashboard/conversations/mark-escalation" style="display:inline;">
+            <input type="hidden" name="phone" value="{{ snapshot.phone_number }}">
+            <button class="btn btn-warning" type="submit">Marcar escalamiento</button>
+        </form>
+    </div>
+</div>
+{% elif searched %}
+<div class="empty-state">
+    <p>No se encontró conversación para "{{ phone }}".</p>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>Ingrese un número de teléfono para buscar su conversación.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Polaritech Ops{% endblock %}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #1a1a2e;
+            line-height: 1.5;
+            padding: 0;
+        }
+        .navbar {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .navbar a {
+            color: #ccc;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .navbar a:hover { color: #fff; }
+        .navbar .brand {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+            margin-right: 1rem;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+        h2 { font-size: 1.2rem; margin-bottom: 0.75rem; }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .stat-card .label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #555;
+        }
+        tr:hover { background: #f9fafb; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-open { background: #fef3c7; color: #92400e; }
+        .badge-in_progress { background: #dbeafe; color: #1e40af; }
+        .badge-closed { background: #d1fae5; color: #065f46; }
+        .badge-new { background: #ede9fe; color: #5b21b6; }
+        .badge-contacted { background: #dbeafe; color: #1e40af; }
+        .badge-quoted { background: #fef3c7; color: #92400e; }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .badge-normal { background: #e5e7eb; color: #374151; }
+        .filters {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+        .filters select, .filters input, .filters button {
+            padding: 0.4rem 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .filters button {
+            background: #1a1a2e;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        .filters button:hover { background: #2d2d4e; }
+        .btn {
+            display: inline-block;
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+        }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; text-decoration: none; }
+        .btn-success { background: #059669; color: #fff; }
+        .btn-success:hover { background: #047857; }
+        .btn-warning { background: #d97706; color: #fff; }
+        .btn-warning:hover { background: #b45309; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-danger:hover { background: #b91c1c; }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        .detail-grid dt {
+            font-weight: 600;
+            color: #555;
+        }
+        .detail-grid dd {
+            color: #1a1a2e;
+            word-break: break-word;
+        }
+        .actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #888;
+        }
+        .empty-state p { font-size: 1rem; }
+        @media (max-width: 600px) {
+            .detail-grid { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/dashboard" class="brand">Polaritech Ops</a>
+        <a href="/dashboard">Inicio</a>
+        <a href="/dashboard/escalations">Escalaciones</a>
+        <a href="/dashboard/leads">Leads</a>
+        <a href="/dashboard/conversations">Conversaciones</a>
+    </nav>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

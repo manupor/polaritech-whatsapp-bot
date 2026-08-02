@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Polaritech Ops{% endblock %}
+{% block content %}
+<h1>Panel de Operaciones</h1>
+
+<div class="stats">
+    <div class="stat-card">
+        <div class="number">{{ counts.escalations_open }}</div>
+        <div class="label">Escalaciones Abiertas</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ counts.escalations_in_progress }}</div>
+        <div class="label">En Progreso</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ counts.leads_new }}</div>
+        <div class="label">Leads Nuevos</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ counts.leads_contacted }}</div>
+        <div class="label">Contactados</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ counts.leads_quoted }}</div>
+        <div class="label">Cotizados</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Acciones rápidas</h2>
+    <p style="margin-top:0.5rem;">
+        <a href="/dashboard/escalations?status=open" class="btn btn-warning">Ver escalaciones abiertas</a>
+        <a href="/dashboard/leads?status=new" class="btn btn-primary" style="margin-left:0.5rem;">Ver leads nuevos</a>
+    </p>
+</div>
+{% endblock %}

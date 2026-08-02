@@ -1,0 +1,476 @@
+{
+  "project": "Polaritech Knowledge System",
+  "version": "1.0",
+  "language": "es-CR",
+  "integrity_rule": "No inventar información. Usar 'Información pendiente de confirmar' cuando falte un dato.",
+  "company": {
+    "Nombre comercial": "Polaritech Window Film",
+    "Actividad": "Empresa costarricense especializada en asesoría, suministro e instalación de películas arquitectónicas para control solar, reducción térmica, protección UV, privacidad, seguridad y decoración de vidrio.",
+    "Historia": "Polaritech nace en 2016 con el propósito de ofrecer soluciones profesionales de control solar para hogares, oficinas y proyectos arquitectónicos. Su enfoque es consultivo: analiza el tipo de vidrio, la orientación solar, las necesidades de confort, privacidad, protección, estética y presupuesto antes de recomendar una solución. Ha desarrollado proyectos residenciales, comerciales y corporativos, con énfasis en calidad de materiales, precisión de instalación, innovación y atención personalizada.",
+    "Misión": "Brindar soluciones profesionales de control solar que contribuyan a mejorar el confort, la eficiencia y la protección de los espacios mediante tecnologías de alto desempeño, asesoría especializada e instalaciones realizadas con excelencia.",
+    "Visión": "Ser la empresa referente en soluciones de control solar y películas arquitectónicas en Costa Rica, reconocida por su innovación, calidad, experiencia y compromiso con cada proyecto.",
+    "Valores": "Excelencia, Integridad, Innovación, Compromiso, Servicio y Profesionalismo.",
+    "Ubicación": "No existe local físico de atención al público. Se reportan bodegas de almacenamiento en Tibás. La atención se realiza principalmente en el sitio del proyecto.",
+    "Sitio web": "www.polaritech.net",
+    "Cobertura": "Costa Rica. Las visitas técnicas se coordinan principalmente dentro del Gran Área Metropolitana (GAM). Proyectos fuera del GAM se valoran según ubicación y características.",
+    "Horario": "Información pendiente de confirmar.",
+    "Teléfono / WhatsApp": "Información pendiente de confirmar.",
+    "Correo": "Información pendiente de confirmar.",
+    "Redes sociales": "Información pendiente de confirmar."
+  },
+  "products": [
+    {
+      "nombre": "Nano Cerámica / Nanoceramic IRR98",
+      "descripcion": "Línea premium 100% nanocerámica, sin metal, orientada a máxima reducción térmica con alta claridad óptica y mínima alteración estética.",
+      "beneficios": [
+        "IRR de hasta 98%.",
+        "Protección UV aproximada de 99.5%.",
+        "No genera efecto espejo.",
+        "No interfiere con Wi‑Fi ni telefonía.",
+        "Ayuda a proteger muebles, pisos, cortinas, tapicerías y acabados.",
+        "Adecuada para condominios con restricciones de fachada."
+      ],
+      "vlt": "Disponible en 70%, 45%, 20% y 10% de transmisión de luz visible.",
+      "datos": {
+        "VLT": "70% (ficha disponible)",
+        "UV": "99.5%",
+        "IRR": "98% (1400 nm)",
+        "TSER": "62%",
+        "Espesor": "3 mil",
+        "Garantía": "12 años"
+      },
+      "recomendada": "Máxima reducción de calor, mantener iluminación natural y respetar la apariencia de la fachada."
+    },
+    {
+      "nombre": "IRR65 Economic / Línea Económica",
+      "descripcion": "Película de control solar con reducción moderada de calor y enfoque en relación costo-beneficio.",
+      "beneficios": [
+        "Privacidad durante el día.",
+        "Protección UV.",
+        "Alternativa económica para proyectos residenciales y comerciales."
+      ],
+      "vlt": "20% en la ficha técnica compartida.",
+      "datos": {
+        "VLT": "20%",
+        "UV": "99%",
+        "IRR": "65% (950 nm)",
+        "TSER": "45%",
+        "Espesor": "2 mil",
+        "Garantía": "5 años"
+      },
+      "recomendada": "Cuando el presupuesto es el principal criterio y se busca control solar y privacidad diurna."
+    },
+    {
+      "nombre": "Silver Espejo / Silver Grey",
+      "descripcion": "Película reflectiva para privacidad diurna, control solar y apariencia exterior tipo espejo.",
+      "beneficios": [
+        "Efecto espejo visible durante el día.",
+        "Alta privacidad diurna.",
+        "Buen control solar.",
+        "Reducción de deslumbramiento."
+      ],
+      "vlt": "18%",
+      "datos": {
+        "VLT": "18%",
+        "UV": "99%",
+        "IRR": "80% (950 nm)",
+        "TSER": "52% según ficha compartida",
+        "Espesor": "2 mil según ficha compartida",
+        "Garantía": "6 años según imagen; existe otra ficha previa con 7 años, por lo que debe confirmarse la versión vigente"
+      },
+      "recomendada": "Privacidad durante el día y estética reflectiva."
+    },
+    {
+      "nombre": "Película de Seguridad",
+      "descripcion": "Película diseñada para reforzar el vidrio y ayudar a retener fragmentos en caso de rotura.",
+      "beneficios": [
+        "Mayor protección para personas y propiedades.",
+        "Ayuda a mantener unidos los fragmentos del vidrio."
+      ],
+      "vlt": "Información pendiente de confirmar.",
+      "datos": {
+        "Espesor": "Información pendiente de confirmar.",
+        "Garantía": "Información pendiente de confirmar."
+      },
+      "recomendada": "Seguridad, contención de fragmentos y reducción de riesgo por rotura."
+    },
+    {
+      "nombre": "Sand Blasting",
+      "descripcion": "Película decorativa con acabado tipo vidrio esmerilado.",
+      "beneficios": [
+        "Privacidad permanente en ambos sentidos.",
+        "Permite el paso de luz natural.",
+        "Acabado limpio para divisiones interiores."
+      ],
+      "vlt": "Información pendiente de confirmar.",
+      "datos": {
+        "Espesor": "Información pendiente de confirmar.",
+        "Garantía": "Información pendiente de confirmar."
+      },
+      "recomendada": "Privacidad 24/7 en oficinas, consultorios, baños y divisiones."
+    },
+    {
+      "nombre": "White Out / Black Out",
+      "descripcion": "Líneas mencionadas en materiales web para bloqueo visual o acabados opacos.",
+      "beneficios": [
+        "Aplicaciones de privacidad total o bloqueo visual, según referencia."
+      ],
+      "vlt": "Información pendiente de confirmar.",
+      "datos": {
+        "Especificaciones": "Información pendiente de confirmar.",
+        "Garantía": "Información pendiente de confirmar."
+      },
+      "recomendada": "Casos donde se requiera bloquear completamente la visibilidad o crear una superficie opaca."
+    }
+  ],
+  "pricing_rules": [
+    "No existe un precio único por metro cuadrado; la cotización es personalizada.",
+    "Factores: metros cuadrados, línea seleccionada, provincia y zona, dentro o fuera del GAM, dificultad de acceso, necesidad de gradas o andamios, retiro de lámina existente y condiciones del proyecto.",
+    "Para cotizar se solicitan fotografías, medidas aproximadas alto × ancho, provincia, zona y necesidad principal.",
+    "Si el cliente no tiene medidas, se pueden usar fotografías y ubicación para una estimación preliminar; las medidas finales se rectifican el día de la instalación.",
+    "Mínimo de instalación dentro del GAM: 4 m².",
+    "Reserva: 50% de adelanto para apartar la fecha y 50% al finalizar.",
+    "Formas de pago: transferencia bancaria, SINPE Móvil y tarjeta.",
+    "Financiamiento: Información pendiente de confirmar.",
+    "Precios y rangos por producto: Información pendiente de confirmar."
+  ],
+  "installation_rules": [
+    "La instalación se realiza generalmente por la cara interior del vidrio.",
+    "Antes de instalar se verifica compatibilidad con el tipo de vidrio, espesor, templado, laminado y tratamientos existentes.",
+    "No se instala una película nueva sobre otra existente; la anterior debe retirarse.",
+    "Las medidas finales se rectifican el día de la instalación.",
+    "Proyectos residenciales suelen tomar aproximadamente 3 a 4 horas; proyectos mayores pueden requerir uno o varios días.",
+    "El cliente normalmente puede permanecer en el inmueble; el proceso se procura mantener limpio y ordenado.",
+    "Antes de la visita, el cliente debe despejar el área cercana a las ventanas, retirar objetos delicados y comunicar restricciones de acceso.",
+    "Curado y limpieza: esperar 45 días para películas arquitectónicas y 60 días para películas de seguridad antes de limpiar.",
+    "Limpieza recomendada: microfibra, agua y una pequeña cantidad de alcohol o vinagre blanco.",
+    "Evitar cuchillas, esponjas abrasivas, químicos agresivos y presión sobre bordes.",
+    "Durante el curado pueden observarse neblina, humedad o pequeñas marcas temporales."
+  ],
+  "technical_visits": [
+    "Las visitas técnicas se consideran principalmente para proyectos de aproximadamente 7 m² o más, o cuando la complejidad exige inspección previa.",
+    "Cobertura principal: Gran Área Metropolitana (GAM).",
+    "Antes de programar se solicitan provincia, zona, fotografías, medidas aproximadas si existen y objetivo del proyecto.",
+    "Durante la visita se puede verificar tipo de vidrio, medidas, orientación solar, accesos, equipos requeridos y producto recomendado.",
+    "Costo de la visita: Información pendiente de confirmar."
+  ],
+  "faq": [
+    {
+      "id": 1,
+      "question": "¿Qué tipos de láminas ofrecen?",
+      "answer": "Nano Cerámica, Económica, Silver Espejo, Seguridad, Sand Blasting y, en documentación web, White Out/Black Out. La recomendación depende de la necesidad de calor, privacidad, seguridad, decoración o estética."
+    },
+    {
+      "id": 2,
+      "question": "¿Cuál recomiendan si hace mucho calor?",
+      "answer": "Nano Cerámica. Alcanza hasta 98% de rechazo de radiación infrarroja y está diseñada para reducir significativamente la sensación térmica."
+    },
+    {
+      "id": 3,
+      "question": "¿La Nano Cerámica transparente reduce menos calor?",
+      "answer": "No. En esta línea el desempeño térmico proviene de la tecnología nanocerámica, no del nivel de tinte."
+    },
+    {
+      "id": 4,
+      "question": "¿Cuál recomiendan para privacidad?",
+      "answer": "Para privacidad diurna: Económica o Silver Espejo. Para privacidad permanente en ambos sentidos: Sand Blasting."
+    },
+    {
+      "id": 5,
+      "question": "¿La privacidad funciona de día y de noche?",
+      "answer": "No en películas de control solar. Durante el día funciona por la diferencia de iluminación. De noche, con luces interiores encendidas, el efecto se invierte. Para privacidad 24/7 se recomienda Sand Blasting, cortinas o persianas."
+    },
+    {
+      "id": 6,
+      "question": "¿Cómo se ve hacia afuera?",
+      "answer": "Depende del entorno, la vegetación, edificaciones, cielo, orientación y nivel de iluminación."
+    },
+    {
+      "id": 7,
+      "question": "¿Oscurece mucho?",
+      "answer": "Depende del VLT, tamaño de ventanales, colores interiores y luz exterior. Se pueden colocar muestras para ayudar a elegir."
+    },
+    {
+      "id": 8,
+      "question": "¿Qué porcentaje recomiendan?",
+      "answer": "70% para máxima iluminación y mínima alteración; 45% para equilibrio; 20% para mayor privacidad; 10% para máxima privacidad diurna."
+    },
+    {
+      "id": 9,
+      "question": "¿La Nano Cerámica tiene efecto espejo?",
+      "answer": "No. No contiene metal y mantiene una apariencia discreta. Para efecto espejo se recomienda Silver Espejo."
+    },
+    {
+      "id": 10,
+      "question": "¿Sirve para condominios con restricciones de fachada?",
+      "answer": "Sí. La Nano Cerámica 70% prácticamente no altera la apariencia exterior."
+    },
+    {
+      "id": 11,
+      "question": "¿Cuánto reduce el calor?",
+      "answer": "La Nano Cerámica ofrece hasta 98% IRR. La percepción real depende del vidrio, orientación, ventilación y características del inmueble."
+    },
+    {
+      "id": 12,
+      "question": "¿Cuántos grados Celsius reduce?",
+      "answer": "No existe conversión directa entre IRR y grados. Se ha documentado un rango aproximado de 3 °C a 8 °C según condiciones del proyecto."
+    },
+    {
+      "id": 13,
+      "question": "¿Elimina completamente el calor?",
+      "answer": "No. Ninguna película elimina el 100% del calor, porque también puede ingresar por techos, paredes, puertas y ventilación."
+    },
+    {
+      "id": 14,
+      "question": "¿Ayuda al aire acondicionado?",
+      "answer": "Sí. Al reducir carga térmica por ventanas puede disminuir la exigencia del equipo."
+    },
+    {
+      "id": 15,
+      "question": "¿Protege los muebles?",
+      "answer": "Sí. Bloquea aproximadamente 99% a 99.5% de radiación UV, ayudando a disminuir el deterioro de interiores."
+    },
+    {
+      "id": 16,
+      "question": "¿Protege la piel?",
+      "answer": "Ayuda a reducir la exposición a radiación UV cerca de ventanas, aunque no sustituye medidas personales de protección."
+    },
+    {
+      "id": 17,
+      "question": "¿Funciona cuando está nublado?",
+      "answer": "Sí. Continúa aportando protección y control solar, aunque la intensidad de radiación varía."
+    },
+    {
+      "id": 18,
+      "question": "¿Cómo solicito cotización?",
+      "answer": "Enviar fotografías, medidas aproximadas alto × ancho, provincia, zona y objetivo principal."
+    },
+    {
+      "id": 19,
+      "question": "No tengo medidas, ¿qué hago?",
+      "answer": "Enviar fotografías generales, provincia y zona. Se puede estimar preliminarmente y rectificar el día de instalación."
+    },
+    {
+      "id": 20,
+      "question": "¿Cuál es el precio por metro cuadrado?",
+      "answer": "Depende de metros cuadrados, línea, ubicación, dificultad, accesos, andamios y retiro de material existente."
+    },
+    {
+      "id": 21,
+      "question": "¿Cuál es el mínimo de instalación?",
+      "answer": "4 m² dentro del GAM."
+    },
+    {
+      "id": 22,
+      "question": "¿Cuánto dura la instalación?",
+      "answer": "Normalmente 3 a 4 horas en proyectos residenciales; proyectos mayores pueden requerir más tiempo."
+    },
+    {
+      "id": 23,
+      "question": "¿Debo salir de la casa?",
+      "answer": "No. Generalmente puede permanecer en el inmueble."
+    },
+    {
+      "id": 24,
+      "question": "¿Genera desorden?",
+      "answer": "El proceso se realiza procurando mantener el área limpia y ordenada."
+    },
+    {
+      "id": 25,
+      "question": "¿Cuándo puedo limpiar?",
+      "answer": "Después de 45 días en películas arquitectónicas y 60 días en seguridad."
+    },
+    {
+      "id": 26,
+      "question": "¿Cómo se limpia?",
+      "answer": "Con microfibra, agua y una pequeña cantidad de alcohol o vinagre blanco. No usar abrasivos ni cuchillas."
+    },
+    {
+      "id": 27,
+      "question": "¿La lámina pierde color?",
+      "answer": "No debería. Durante la garantía se cubren defectos de fabricación como decoloración, desprendimiento y deformaciones."
+    },
+    {
+      "id": 28,
+      "question": "¿Se despega?",
+      "answer": "No debería si fue instalada correctamente sobre una superficie compatible."
+    },
+    {
+      "id": 29,
+      "question": "¿Se puede retirar?",
+      "answer": "Sí, por personal capacitado."
+    },
+    {
+      "id": 30,
+      "question": "¿Se instala sobre otra lámina?",
+      "answer": "No. Debe retirarse la existente."
+    },
+    {
+      "id": 31,
+      "question": "¿Afecta Wi‑Fi o celular?",
+      "answer": "No, especialmente las líneas no metálicas como Nano Cerámica."
+    },
+    {
+      "id": 32,
+      "question": "¿Se instala por dentro o por fuera?",
+      "answer": "Generalmente por la cara interior del vidrio."
+    },
+    {
+      "id": 33,
+      "question": "¿Sirve para cualquier ventana?",
+      "answer": "En la mayoría de los casos sí, pero debe evaluarse el tipo de vidrio y la compatibilidad."
+    },
+    {
+      "id": 34,
+      "question": "¿Puede romper el vidrio?",
+      "answer": "No debería cuando se selecciona una película compatible con el tipo de vidrio."
+    },
+    {
+      "id": 35,
+      "question": "¿Se instala sobre vidrio laminado o temperado?",
+      "answer": "Sí, después de verificar compatibilidad."
+    },
+    {
+      "id": 36,
+      "question": "¿Se instala sobre policarbonato?",
+      "answer": "Puede instalarse, pero la documentación indica que se realiza sin garantía."
+    },
+    {
+      "id": 37,
+      "question": "¿Cuánta garantía tienen?",
+      "answer": "Entre 5 y 12 años según la línea."
+    },
+    {
+      "id": 38,
+      "question": "¿Qué cubre la garantía?",
+      "answer": "Desprendimiento, decoloración, arrugas o deformaciones por defectos de fabricación."
+    },
+    {
+      "id": 39,
+      "question": "¿Qué formas de pago aceptan?",
+      "answer": "Transferencia bancaria, SINPE Móvil y tarjeta."
+    },
+    {
+      "id": 40,
+      "question": "¿Cómo se agenda?",
+      "answer": "Se coordina según disponibilidad; se solicita 50% de adelanto y 50% al finalizar."
+    },
+    {
+      "id": 41,
+      "question": "¿Dónde están ubicados?",
+      "answer": "No hay local físico de atención al público. Se reportan bodegas en Tibás y atención en el sitio del proyecto."
+    },
+    {
+      "id": 42,
+      "question": "¿Qué significa IRR?",
+      "answer": "Rechazo de Radiación Infrarroja."
+    },
+    {
+      "id": 43,
+      "question": "¿Qué significa TSER?",
+      "answer": "Rechazo Total de Energía Solar."
+    },
+    {
+      "id": 44,
+      "question": "¿Qué significa VLT?",
+      "answer": "Transmisión de Luz Visible."
+    },
+    {
+      "id": 45,
+      "question": "¿Qué significa SHGC?",
+      "answer": "Coeficiente de Ganancia de Calor Solar."
+    },
+    {
+      "id": 46,
+      "question": "¿Trabajan con 3M?",
+      "answer": "Actualmente no. Polaritech trabaja con tecnologías seleccionadas por su equilibrio entre desempeño, calidad y costo."
+    },
+    {
+      "id": 47,
+      "question": "Me ofrecieron 3M más barato, ¿qué responden?",
+      "answer": "Es posible. Se recomienda comparar tecnología, desempeño, garantía e instalación, no solo la marca."
+    },
+    {
+      "id": 48,
+      "question": "¿Por qué escoger Polaritech?",
+      "answer": "Por asesoría técnica personalizada, tecnologías de alto desempeño, instalación profesional y soluciones ajustadas a cada proyecto."
+    },
+    {
+      "id": 49,
+      "question": "¿Qué significa 100% Nano Cerámica?",
+      "answer": "Tecnología sin capas metálicas, con alto rechazo infrarrojo, buena claridad óptica y mínima alteración estética."
+    },
+    {
+      "id": 50,
+      "question": "¿Evita gotas de agua en el vidrio?",
+      "answer": "No. La condensación exterior depende de humedad y diferencias de temperatura; la película no modifica el clima exterior."
+    }
+  ],
+  "policies": {
+    "Garantía": [
+      "Duración de 5 a 12 años según la línea.",
+      "Cubre defectos de fabricación: desprendimiento, decoloración, arrugas y deformaciones.",
+      "Exclusiones detalladas: Información pendiente de confirmar."
+    ],
+    "Limpieza y mantenimiento": [
+      "Esperar 45 días en películas arquitectónicas y 60 días en seguridad.",
+      "Usar microfibra, agua, alcohol o vinagre blanco diluido.",
+      "No usar abrasivos, cuchillas, químicos agresivos ni manipular bordes."
+    ],
+    "Cotización": [
+      "Cotizaciones personalizadas basadas en información técnica y logística.",
+      "Medidas finales se verifican el día de instalación."
+    ],
+    "Reserva y pagos": [
+      "50% para reservar fecha y 50% al finalizar.",
+      "Transferencia, SINPE Móvil y tarjeta."
+    ],
+    "Devoluciones y cancelaciones": [
+      "Información pendiente de confirmar."
+    ]
+  },
+  "special_cases": [
+    {
+      "case": "Cliente pide descuento",
+      "response": "Revisar si existe una promoción o alternativa dentro del presupuesto, sin comprometer calidad ni prometer descuentos no autorizados."
+    },
+    {
+      "case": "Cliente encontró precio más bajo",
+      "response": "Explicar que existen distintas tecnologías, garantías y niveles de instalación; comparar desempeño total y no solo precio."
+    },
+    {
+      "case": "Cliente compara con competencia",
+      "response": "Responder con respeto, reconocer que hay distintas gamas y centrar la explicación en tecnología, garantía, instalación y valor."
+    },
+    {
+      "case": "Cliente pide producto no ofrecido",
+      "response": "No inventar disponibilidad. Indicar que no se ofrece y proponer la alternativa más cercana del portafolio."
+    },
+    {
+      "case": "Queja por falta de privacidad nocturna",
+      "response": "Explicar la dependencia de la iluminación y recomendar cortinas, persianas o Sand Blasting."
+    },
+    {
+      "case": "Cliente aún siente calor",
+      "response": "Explicar que la película reduce la radiación por vidrio, pero el calor también ingresa por otros elementos; ofrecer revisión técnica."
+    },
+    {
+      "case": "Cliente cree que más oscuro significa más frío",
+      "response": "Aclarar que en Nano Cerámica el desempeño térmico depende de la tecnología, no del tono."
+    },
+    {
+      "case": "Reclamo de garantía",
+      "response": "Escalar a un asesor humano, solicitar fotografías, fecha de instalación, producto y descripción del problema."
+    }
+  ],
+  "bot_rules": [
+    "Responder como asesor técnico profesional, claro, respetuoso y cercano.",
+    "No inventar precios, garantías, disponibilidad, especificaciones ni políticas.",
+    "Cuando falte un dato, usar la frase: 'Información pendiente de confirmar' y escalar a un asesor.",
+    "No hablar negativamente de competidores.",
+    "No prometer descuentos ni fechas sin autorización.",
+    "Solicitar fotografías, medidas, provincia, zona y necesidad principal para cotizaciones.",
+    "Escalar reclamos, garantías, cotizaciones formales, visitas técnicas y casos no documentados.",
+    "Mantener respuestas breves para preguntas simples y ampliar solo cuando el cliente lo necesite."
+  ]
+}

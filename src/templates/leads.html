@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Leads — Polaritech Ops{% endblock %}
+{% block content %}
+<h1>Leads</h1>
+
+<form class="filters" method="get" action="/dashboard/leads">
+    <select name="status">
+        <option value="">Todos los estados</option>
+        <option value="new" {{ 'selected' if filter_status == 'new' }}>Nuevo</option>
+        <option value="contacted" {{ 'selected' if filter_status == 'contacted' }}>Contactado</option>
+        <option value="quoted" {{ 'selected' if filter_status == 'quoted' }}>Cotizado</option>
+        <option value="closed" {{ 'selected' if filter_status == 'closed' }}>Cerrado</option>
+    </select>
+    <select name="lead_type">
+        <option value="">Todos los tipos</option>
+        <option value="quote" {{ 'selected' if filter_lead_type == 'quote' }}>Cotización</option>
+        <option value="warranty" {{ 'selected' if filter_lead_type == 'warranty' }}>Garantía</option>
+        <option value="technical_visit" {{ 'selected' if filter_lead_type == 'technical_visit' }}>Visita técnica</option>
+        <option value="general" {{ 'selected' if filter_lead_type == 'general' }}>General</option>
+    </select>
+    <button type="submit">Filtrar</button>
+</form>
+
+{% if records %}
+<div class="card" style="padding:0; overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Teléfono</th>
+                <th>Tipo</th>
+                <th>Provincia</th>
+                <th>Estado</th>
+                <th>Creado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td><a href="/dashboard/leads/{{ r.id }}">{{ r.id }}</a></td>
+                <td>{{ r.phone_number }}</td>
+                <td>{{ r.lead_type }}</td>
+                <td>{{ r.province or '—' }}</td>
+                <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+                <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No hay leads con estos filtros.</p>
+</div>
+{% endif %}
+{% endblock %}

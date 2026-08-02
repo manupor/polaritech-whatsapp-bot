@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Environment (keep .env.example, .env.staging, .env.production as reference)
+.env
+
+# SQLite database
+*.db
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
