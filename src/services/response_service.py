@@ -425,7 +425,11 @@ def _handle_product_info(phone: str, text: str) -> BotResponse:
         )
 
     answer = find_answer(text)
-    reply = answer if answer else TEMPLATES["fallback_no_match"].format(pending=PENDING_PHRASE)
+    if answer:
+        reply = answer
+    else:
+        # Generic product info request should show catalog, not pending fallback
+        reply = TEMPLATES["product_catalog"]
     conversation_store.add_turn(phone, "bot", reply)
     return BotResponse(
         phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO,
@@ -862,6 +866,8 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
             "menu_button_handled  phone=%s  button_id=%s  intent=%s",
             phone, button_id, BUTTON_ID_TO_INTENT[button_id].value,
         )
+        # Clear active flow when user uses global menu buttons
+        conversation_store.clear_flow(phone)
         return _handle_button_click(phone, button_id)
     
     # Priority 3.5: Check for post-closure buttons (go_main_menu, start_visit_flow, human_help)
