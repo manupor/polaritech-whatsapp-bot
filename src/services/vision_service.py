@@ -33,14 +33,17 @@ class VisionService:
             Image bytes or None if failed
         """
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
                 response = await client.get(
                     image_url,
-                    headers={"Authorization": f"OAuth {access_token}"}
+                    headers={"Authorization": f"Bearer {access_token}"}
                 )
 
                 if response.status_code == 200:
-                    logger.info("image_download_success  size=%d bytes", len(response.content))
+                    logger.info(
+                        "image_download_success  size=%d bytes  content_type=%s",
+                        len(response.content), response.headers.get("content-type", "unknown")
+                    )
                     return response.content
                 else:
                     logger.error(
@@ -146,10 +149,11 @@ class VisionService:
             Dictionary with extracted measurements or None if failed
         """
         prompt = (
-            "Analyze this image and extract any measurements visible. "
-            "Look for dimensions like width, height, length, area in meters or centimeters. "
-            "Also identify the type of surface or product (e.g., window, glass, mirror, etc.). "
-            "Return the information in a structured format."
+            "Analiza esta imagen cuidadosamente y responde SIEMPRE en español. "
+            "Extrae toda la información visible: tipo de producto o superficie (ventana, vidrio, espejo, puerta, etc.), "
+            "materiales, colores, y cualquier medida o dimensión que puedas identificar. "
+            "Si no hay medidas exactas visibles, indica que se necesitan. "
+            "Sé específico y detallado en tu análisis."
         )
 
         result = await self.analyze_image(image_url, access_token, prompt)
