@@ -86,20 +86,9 @@ def test_new_contact_gets_welcome(mock_welcome_wa, mock_webhook_wa, mock_setting
     resp = client.post("/webhook", json=_text_payload(sender="50688077777"))
     assert resp.status_code == 200
 
-    # Interactive menu buttons were sent first (with welcome text)
-    mock_welcome_wa.send_interactive_buttons.assert_called_once()
-    menu_call = mock_welcome_wa.send_interactive_buttons.call_args
-    assert menu_call[0][0] == "50688077777"
-    # Check that welcome text is in the body keyword argument
-    body_text = menu_call[1].get("body", "")
-    assert WELCOME_TEXT in body_text
-
-    # Welcome image was sent after the buttons (with empty caption)
-    mock_welcome_wa.send_image.assert_called_once()
-    img_call = mock_welcome_wa.send_image.call_args
-    assert img_call[0][0] == "50688077777"
-    assert img_call[1]["image_url"] == "https://example.com/welcome.jpg"
-    assert img_call[1]["caption"] == ""
+    # Welcome is temporarily disabled, so no welcome messages should be sent
+    mock_welcome_wa.send_interactive_buttons.assert_not_called()
+    mock_welcome_wa.send_image.assert_not_called()
 
 
 # ── Test: Existing active conversation does NOT get welcome again ────────────
@@ -132,7 +121,7 @@ def test_existing_active_conversation_no_welcome(mock_welcome_wa, mock_webhook_w
     resp = client.post("/webhook", json=_text_payload(sender=phone, msg_id="wamid.exist001"))
     assert resp.status_code == 200
 
-    # Welcome was NOT sent
+    # Welcome is temporarily disabled
     mock_welcome_wa.send_interactive_buttons.assert_not_called()
     mock_welcome_wa.send_image.assert_not_called()
 
@@ -173,8 +162,8 @@ def test_old_conversation_gets_welcome_again(mock_welcome_wa, mock_webhook_wa, m
     resp = client.post("/webhook", json=_text_payload(sender=phone, msg_id="wamid.old001"))
     assert resp.status_code == 200
 
-    # Welcome text was sent (but no image since config is empty)
-    mock_welcome_wa.send_interactive_buttons.assert_called_once()
+    # Welcome is temporarily disabled
+    mock_welcome_wa.send_interactive_buttons.assert_not_called()
 
 
 # ── Test: Duplicate webhook does NOT duplicate welcome ───────────────────────
@@ -200,8 +189,8 @@ def test_duplicate_webhook_no_duplicate_welcome(mock_welcome_wa, mock_webhook_wa
     assert resp1.status_code == 200
     assert resp2.status_code == 200
 
-    # Welcome text sent only once
-    assert mock_welcome_wa.send_interactive_buttons.call_count == 1
+    # Welcome is temporarily disabled
+    mock_welcome_wa.send_interactive_buttons.assert_not_called()
 
 
 # ── Test: Missing image config sends only greeting text ──────────────────────
@@ -225,8 +214,8 @@ def test_missing_image_config_text_only(mock_welcome_wa, mock_webhook_wa, mock_s
     resp = client.post("/webhook", json=_text_payload(sender="50688033333", msg_id="wamid.noimg001"))
     assert resp.status_code == 200
 
-    # Text sent, image NOT sent
-    mock_welcome_wa.send_interactive_buttons.assert_called_once()
+    # Welcome is temporarily disabled
+    mock_welcome_wa.send_interactive_buttons.assert_not_called()
     mock_welcome_wa.send_image.assert_not_called()
 
 

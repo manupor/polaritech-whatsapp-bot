@@ -63,6 +63,7 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
         buttons=MENU_BUTTONS,
         footer=MENU_FOOTER,
     )
+    # Persist menu in background (don't block)
     _persist_menu(phone_number, menu_result)
 
     # Send image separately if configured (after the text to avoid disorder)
@@ -75,6 +76,7 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
             media_id=media_id,
             caption="",
         )
+        # Persist image in background (don't block)
         _persist_welcome_image(phone_number, img_result)
 
     return True

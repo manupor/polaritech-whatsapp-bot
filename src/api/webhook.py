@@ -172,8 +172,11 @@ async def _process_message(
         )
 
         # ── Welcome flow for new conversations ────────────────────────
-        welcome_sent = await maybe_send_welcome(sender, sender_name)
+        # Temporarily disabled to isolate timeout issues
+        # welcome_sent = await maybe_send_welcome(sender, sender_name)
+        welcome_sent = False
 
+        # Persist inbound in background (don't block webhook)
         persist_inbound(incoming, wa_message_id=msg_id)
 
         # If welcome was just sent, skip the normal bot response to avoid duplicates
@@ -201,7 +204,7 @@ async def _process_message(
         if bot_response.buttons:
             result = await whatsapp_client.send_interactive_buttons(
                 bot_response.phone_number,
-                body_text=bot_response.reply_text,
+                body=bot_response.reply_text,
                 buttons=bot_response.buttons,
             )
         else:
@@ -214,6 +217,7 @@ async def _process_message(
             msg_id, result.success, result.message_id or "n/a",
         )
 
+        # Persist outbound in background (don't block webhook)
         persist_outbound(bot_response, wa_message_id=result.message_id or None)
         return
 
