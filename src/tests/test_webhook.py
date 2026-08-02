@@ -8,12 +8,16 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
+from src.db.database import get_db
+from src.db import repositories as repo
 from src.main import app
 from src.services.whatsapp_service import WhatsAppClient
 from src.state.idempotency_store import InMemoryIdempotencyStore, idempotency_store
 
 
 client = TestClient(app)
+
+_DEFAULT_SENDER = "50688001234"
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -23,6 +27,20 @@ def _reset_idempotency():
     """Clear the idempotency store before each test."""
     if isinstance(idempotency_store, InMemoryIdempotencyStore):
         idempotency_store._store.clear()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _seed_existing_contact():
+    """Seed default senders so the welcome flow does NOT trigger in these tests."""
+    db = get_db()
+    try:
+        for phone in (_DEFAULT_SENDER, "50688005678"):
+            repo.upsert_contact(db, phone, "Test User")
+            repo.upsert_snapshot(db, phone_number=phone, current_intent="greeting", last_bot_response="hi")
+        db.commit()
+    finally:
+        db.close()
     yield
 
 

@@ -172,9 +172,14 @@ async def _process_message(
         )
 
         # ── Welcome flow for new conversations ────────────────────────
-        await maybe_send_welcome(sender, sender_name)
+        welcome_sent = await maybe_send_welcome(sender, sender_name)
 
         persist_inbound(incoming, wa_message_id=msg_id)
+
+        # If welcome was just sent, skip the normal bot response to avoid duplicates
+        if welcome_sent:
+            logger.info("welcome_sent  msg_id=%s  sender=%s  — skipping bot response", msg_id, sender)
+            return
 
         # ── Human takeover guard ─────────────────────────────────────
         if _is_human_takeover(sender):

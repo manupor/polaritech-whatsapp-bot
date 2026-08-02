@@ -60,14 +60,23 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
 
     logger.info("welcome_flow_triggered  phone=%s  name=%s", phone_number, sender_name)
 
-    # 1. Send greeting text
-    text_result = await whatsapp_client.send_text(phone_number, WELCOME_TEXT)
-    _persist_welcome_text(phone_number, text_result)
+    # 1. Send image with greeting as caption (or just text if no image configured)
+    image_url = settings.whatsapp_welcome_image_url
+    media_id = settings.whatsapp_welcome_image_id
 
-    # 2. Send image (if configured)
-    await _send_welcome_image(phone_number)
+    if image_url or media_id:
+        img_result = await whatsapp_client.send_image(
+            phone_number,
+            image_url=image_url,
+            media_id=media_id,
+            caption=WELCOME_TEXT,
+        )
+        _persist_welcome_image(phone_number, img_result)
+    else:
+        text_result = await whatsapp_client.send_text(phone_number, WELCOME_TEXT)
+        _persist_welcome_text(phone_number, text_result)
 
-    # 3. Send interactive menu with buttons
+    # 2. Send interactive menu with buttons
     menu_result = await whatsapp_client.send_interactive_buttons(
         phone_number,
         body=MENU_BODY,
@@ -90,23 +99,6 @@ def _check_needs_welcome(phone_number: str) -> bool:
         db.close()
 
 
-async def _send_welcome_image(phone_number: str) -> None:
-    """Send the welcome image via URL or media ID, or skip with a warning."""
-    image_url = settings.whatsapp_welcome_image_url
-    media_id = settings.whatsapp_welcome_image_id
-
-    if not image_url and not media_id:
-        logger.warning(
-            "welcome_image_skipped  phone=%s  reason=no_image_config", phone_number,
-        )
-        return
-
-    result = await whatsapp_client.send_image(
-        phone_number,
-        image_url=image_url,
-        media_id=media_id,
-    )
-    _persist_welcome_image(phone_number, result)
 
 
 def _persist_welcome_text(phone_number: str, result: SendResult) -> None:

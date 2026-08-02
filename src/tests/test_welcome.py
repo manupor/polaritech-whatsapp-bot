@@ -85,17 +85,15 @@ def test_new_contact_gets_welcome(mock_welcome_wa, mock_webhook_wa, mock_setting
     resp = client.post("/webhook", json=_text_payload(sender="50688077777"))
     assert resp.status_code == 200
 
-    # Welcome text was sent
-    mock_welcome_wa.send_text.assert_called_once()
-    text_call = mock_welcome_wa.send_text.call_args
-    assert text_call[0][0] == "50688077777"
-    assert text_call[0][1] == WELCOME_TEXT
-
-    # Welcome image was sent
+    # Welcome image was sent with greeting as caption
     mock_welcome_wa.send_image.assert_called_once()
     img_call = mock_welcome_wa.send_image.call_args
     assert img_call[0][0] == "50688077777"
     assert img_call[1]["image_url"] == "https://example.com/welcome.jpg"
+    assert img_call[1]["caption"] == WELCOME_TEXT
+
+    # Interactive menu buttons were sent
+    mock_welcome_wa.send_interactive_buttons.assert_called_once()
 
 
 # ── Test: Existing active conversation does NOT get welcome again ────────────
