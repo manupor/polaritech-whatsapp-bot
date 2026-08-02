@@ -19,14 +19,17 @@ from typing import List, Optional
 
 from src.core.constants import (
     BUTTONS_FOLLOWUP_PROMPT,
+    BUTTON_ID_TO_INTENT,
     FIELD_LABELS,
     INTENT_BUTTONS,
     INTERACTIVE_BODY_LIMIT,
     Intent,
     INTENT_KEYWORDS,
     NEED_TO_PRODUCT,
+    normalize_text,
     PENDING_PHRASE,
     TEMPLATES,
+    TEXT_ALIASES,
 )
 from src.schemas.chatbot import BotResponse, EscalationPayload, IncomingMessage
 from src.services.escalation_service import build_escalation_payload, should_escalate
@@ -53,10 +56,64 @@ def _get_post_closure_buttons(flow_type: str) -> List[dict]:
     ]
 
 
+def _get_intent_source(intent: Intent, button_id: Optional[str], normalized_text: str) -> str:
+    """Return a string indicating how the intent was resolved."""
+    if button_id and button_id in BUTTON_ID_TO_INTENT:
+        return "button_id"
+    if normalized_text in TEXT_ALIASES:
+        return "text_alias"
+    if intent != Intent.UNKNOWN:
+        return "classifier"
+    return "fallback"
+
+
+def _resolve_intent_unified(
+    text: str,
+    button_id: Optional[str] = None,
+    active_flow: Optional[str] = None,
+) -> Intent:
+    """
+    Unified intent resolver with priority:
+    1. button_id (interactive message) - direct mapping
+    2. normalized text aliases - direct mapping
+    3. LLM classification
+    4. Keyword classification (fallback)
+    """
+    normalized = normalize_text(text)
+    
+    # Priority 1: button_id direct mapping
+    if button_id and button_id in BUTTON_ID_TO_INTENT:
+        logger.info(
+            "intent_from_button_id  button_id=%s  intent=%s",
+            button_id, BUTTON_ID_TO_INTENT[button_id].value,
+        )
+        return BUTTON_ID_TO_INTENT[button_id]
+    
+    # Priority 2: normalized text aliases
+    if normalized in TEXT_ALIASES:
+        logger.info(
+            "intent_from_text_alias  normalized=%s  intent=%s",
+            normalized, TEXT_ALIASES[normalized].value,
+        )
+        return TEXT_ALIASES[normalized]
+    
+    # Priority 3: LLM classification
+    llm_intent = classify_intent_with_llm(text)
+    if llm_intent:
+        logger.info("intent_from_llm  intent=%s", llm_intent.value)
+        return llm_intent
+    
+    # Priority 4: Keyword classification (fallback)
+    keyword_intent = classify_intent(text)
+    logger.info("intent_from_keywords  intent=%s", keyword_intent.value)
+    return keyword_intent
+
+
 def _classify_intent_hybrid(text: str) -> Intent:
     """
     Classify intent using LLM with fallback to keyword-based classification.
     LLM is tried first if configured, otherwise falls back to keywords.
+    Deprecated: Use _resolve_intent_unified instead.
     """
     # Try LLM classification first
     llm_intent = classify_intent_with_llm(text)
@@ -509,7 +566,20 @@ def register_image_analysis(phone: str, description: str) -> BotResponse:
 
 
 def _handle_button_click(phone: str, button_id: str) -> BotResponse:
-    """Handle post-closure button clicks."""
+    """Handle button clicks including menu buttons and post-closure buttons."""
+    # Handle menu buttons using direct mapping
+    if button_id in BUTTON_ID_TO_INTENT:
+        intent = BUTTON_ID_TO_INTENT[button_id]
+        if intent == Intent.PRODUCT_INFO:
+            return _handle_product_info(phone, "")
+        elif intent == Intent.QUOTE_REQUEST:
+            return _handle_quote(phone, "")
+        elif intent == Intent.TECHNICAL_VISIT:
+            return _handle_technical_visit(phone, "")
+        elif intent == Intent.ESCALATE:
+            return _handle_explicit_escalation(phone)
+    
+    # Handle post-closure buttons
     if button_id == "go_main_menu":
         reply = TEMPLATES["greeting"]
         conversation_store.add_turn(phone, "bot", reply)
@@ -521,14 +591,14 @@ def _handle_button_click(phone: str, button_id: str) -> BotResponse:
         return _handle_technical_visit(phone, "")
     elif button_id == "human_help":
         return _handle_explicit_escalation(phone)
-    else:
-        # Unknown button - treat as unknown intent
-        reply = TEMPLATES["unknown"]
-        conversation_store.add_turn(phone, "bot", reply)
-        return BotResponse(
-            phone_number=phone, reply_text=reply, intent=Intent.UNKNOWN,
-            buttons=_get_buttons_for_intent(Intent.UNKNOWN),
-        )
+    
+    # Unknown button - treat as unknown intent
+    reply = TEMPLATES["unknown"]
+    conversation_store.add_turn(phone, "bot", reply)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.UNKNOWN,
+        buttons=_get_buttons_for_intent(Intent.UNKNOWN),
+    )
 
 
 # ── Main orchestrator ────────────────────────────────────────────────────────
@@ -542,23 +612,28 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
     conversation_store.add_turn(phone, role="user", text=text)
 
     current_flow = conversation_store.get_flow(phone)
+    normalized_text = normalize_text(text)
+    
     logger.info(
-        "message_received  phone=%s  text=%s  button_id=%s  button_title=%s  active_flow=%s  flow_status=%s",
-        phone, text[:80], button_id or 'n/a', button_title or 'n/a',
-        current_flow.flow_type or 'idle', 'collecting' if current_flow.flow_type else 'idle',
+        "message_received  phone=%s  raw_text=%s  normalized_text=%s  button_id=%s  button_title=%s  active_flow=%s",
+        phone, text[:80], normalized_text[:80], button_id or 'n/a', button_title or 'n/a',
+        current_flow.flow_type or 'idle',
     )
     
-    # If message comes from interactive button, use button_id instead of text classification
+    # Use unified intent resolver with priority
+    intent = _resolve_intent_unified(text, button_id, current_flow.flow_type)
+    
+    logger.info(
+        "resolved_intent  phone=%s  intent=%s  source=%s",
+        phone, intent.value, _get_intent_source(intent, button_id, normalized_text),
+    )
+    
+    # If message comes from interactive button, use button_id handler
     if button_id:
-        logger.info(
-            "button_click  phone=%s  button_id=%s  button_title=%s  current_flow=%s",
-            phone, button_id, button_title or 'n/a', current_flow.flow_type,
-        )
         return _handle_button_click(phone, button_id)
 
     # Check if user is in an active quote flow and sends data (not a new intent)
     if current_flow.flow_type == "quote":
-        intent = _classify_intent_hybrid(text)
         # If the user isn't switching to a completely different intent, treat as
         # continued quote data
         if intent in (Intent.UNKNOWN, Intent.QUOTE_REQUEST, Intent.PRODUCT_INFO):
@@ -567,12 +642,6 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
                 current_flow.no_measurements = True
             if extracted or _detect_no_measurements(text):
                 return _handle_quote(phone, text)
-
-    intent = _classify_intent_hybrid(text)
-    logger.info(
-        "resolved_intent  phone=%s  intent=%s  button_id=%s",
-        phone, intent.value, button_id or 'n/a',
-    )
 
     if intent == Intent.ESCALATE:
         return _handle_explicit_escalation(phone)

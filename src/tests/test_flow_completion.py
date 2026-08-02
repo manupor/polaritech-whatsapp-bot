@@ -48,10 +48,9 @@ def test_button_click_respects_button_id():
     # Should return greeting with menu buttons
     assert response.intent == Intent.GREETING
     assert "valentina" in response.reply_text.lower() or "asistente" in response.reply_text.lower()
-    
     # Should have menu buttons, not post-closure buttons
     button_ids = [b.get("id") for b in response.buttons]
-    assert "menu_productos" in button_ids or "menu_cotizacion" in button_ids
+    assert "menu_products" in button_ids or "menu_quote" in button_ids
 
 
 def test_button_click_start_visit_flow():

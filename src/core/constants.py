@@ -7,8 +7,10 @@ Source of truth: Polaritech_FAQ_v1-3-1-1.json / Polaritech_Base_Conocimiento_v1-
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from enum import Enum
-from typing import Dict, FrozenSet, List
+from typing import Dict, FrozenSet, List, Optional
 
 
 # ── Pending-info sentinel ────────────────────────────────────────────────────
@@ -36,6 +38,78 @@ class Intent(str, Enum):
     PENDING_QUERY = "pending_query"
     ESCALATE = "escalate"
     UNKNOWN = "unknown"
+
+
+# ── Text normalization ────────────────────────────────────────────────────────
+
+def normalize_text(text: str) -> str:
+    """
+    Normalize text for intent matching:
+    - lowercase
+    - trim
+    - remove accents/tildes
+    - collapse multiple spaces
+    """
+    if not text:
+        return ""
+    
+    # Lowercase
+    text = text.lower()
+    
+    # Remove accents (normalize to NFD and remove combining marks)
+    text = unicodedata.normalize('NFD', text)
+    text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')
+    
+    # Trim
+    text = text.strip()
+    
+    # Collapse multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text
+
+
+# ── Stable menu button IDs ────────────────────────────────────────────────────
+
+MENU_ID_PRODUCTS = "menu_products"
+MENU_ID_QUOTE = "menu_quote"
+MENU_ID_VISIT = "menu_visit"
+MENU_ID_HUMAN = "menu_human"
+
+# Map button IDs directly to intents (bypass classifier)
+BUTTON_ID_TO_INTENT: Dict[str, Intent] = {
+    MENU_ID_PRODUCTS: Intent.PRODUCT_INFO,
+    MENU_ID_QUOTE: Intent.QUOTE_REQUEST,
+    MENU_ID_VISIT: Intent.TECHNICAL_VISIT,
+    MENU_ID_HUMAN: Intent.ESCALATE,
+}
+
+# Text aliases for normalized text matching (bypass classifier)
+TEXT_ALIASES: Dict[str, Intent] = {
+    # Quote aliases
+    "cotizacion": Intent.QUOTE_REQUEST,
+    "cotizar": Intent.QUOTE_REQUEST,
+    "presupuesto": Intent.QUOTE_REQUEST,
+    "precio": Intent.QUOTE_REQUEST,
+    "costo": Intent.QUOTE_REQUEST,
+    # Product info aliases
+    "productos": Intent.PRODUCT_INFO,
+    "info de productos": Intent.PRODUCT_INFO,
+    "informacion de productos": Intent.PRODUCT_INFO,
+    "laminas": Intent.PRODUCT_INFO,
+    "lamina": Intent.PRODUCT_INFO,
+    "pelicula": Intent.PRODUCT_INFO,
+    "catalogo": Intent.PRODUCT_INFO,
+    # Visit aliases
+    "agendar visita": Intent.TECHNICAL_VISIT,
+    "visita tecnica": Intent.TECHNICAL_VISIT,
+    "visita": Intent.TECHNICAL_VISIT,
+    # Human/escalation aliases
+    "asesor": Intent.ESCALATE,
+    "humano": Intent.ESCALATE,
+    "hablar con asesor": Intent.ESCALATE,
+    "persona real": Intent.ESCALATE,
+}
 
 
 INTENT_KEYWORDS: Dict[Intent, List[str]] = {
@@ -98,10 +172,10 @@ INTENT_KEYWORDS: Dict[Intent, List[str]] = {
 # ── Quick-reply buttons ─────────────────────────────────────────────────────
 # WhatsApp reply buttons: max 3 per message, title max 20 characters.
 
-BTN_PRODUCTOS = {"id": "menu_productos", "title": "Info de productos"}
-BTN_COTIZACION = {"id": "menu_cotizacion", "title": "Cotización"}
-BTN_VISITA = {"id": "menu_visita", "title": "Agendar visita"}
-BTN_ASESOR = {"id": "menu_asesor", "title": "Hablar con asesor"}
+BTN_PRODUCTOS = {"id": MENU_ID_PRODUCTS, "title": "Info de productos"}
+BTN_COTIZACION = {"id": MENU_ID_QUOTE, "title": "Cotización"}
+BTN_VISITA = {"id": MENU_ID_VISIT, "title": "Agendar visita"}
+BTN_ASESOR = {"id": MENU_ID_HUMAN, "title": "Hablar con asesor"}
 BTN_SIN_MEDIDAS = {"id": "quote_sin_medidas", "title": "No tengo medidas"}
 
 # Fallback offered whenever an intent has no specific set
@@ -123,12 +197,12 @@ INTENT_BUTTONS: Dict[Intent, List[Dict[str, str]]] = {
     Intent.WARRANTY_CLAIM: [],
 }
 
-# Text sent to the pipeline when a button is tapped
+# Text sent to the pipeline when a button is tapped (legacy, for compatibility)
 BUTTON_ID_TO_TEXT: Dict[str, str] = {
-    "menu_productos": "Información de productos",
-    "menu_cotizacion": "Quiero solicitar una cotización",
-    "menu_visita": "Necesito una visita técnica",
-    "menu_asesor": "asesor",
+    MENU_ID_PRODUCTS: "Información de productos",
+    MENU_ID_QUOTE: "Quiero solicitar una cotización",
+    MENU_ID_VISIT: "Necesito una visita técnica",
+    MENU_ID_HUMAN: "asesor",
     "quote_sin_medidas": "No tengo medidas",
 }
 

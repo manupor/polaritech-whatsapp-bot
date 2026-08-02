@@ -134,11 +134,12 @@ async def _process_message(
             msg_id, sender, reply_id, reply_text,
         )
 
-        # Map button IDs to natural language text for the pipeline
+        # Map button IDs to natural language text for the pipeline (legacy compatibility)
         button_text_map = {
-            "menu_productos": "Información de productos",
-            "menu_cotizacion": "Quiero solicitar una cotización",
-            "menu_visita": "Necesito una visita técnica",
+            "menu_products": "Información de productos",
+            "menu_quote": "Quiero solicitar una cotización",
+            "menu_visit": "Necesito una visita técnica",
+            "menu_human": "asesor",
         }
         text_for_pipeline = button_text_map.get(reply_id, reply_text)
 
