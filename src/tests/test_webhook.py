@@ -301,7 +301,7 @@ def test_inbound_image_unsupported_reply(mock_wa):
     assert resp.status_code == 200
     mock_wa.send_text.assert_called_once()
     reply_text = mock_wa.send_text.call_args[0][1]
-    assert "texto" in reply_text.lower()
+    assert "imagen" in reply_text.lower()
 
 
 @patch("src.api.webhook.whatsapp_client")

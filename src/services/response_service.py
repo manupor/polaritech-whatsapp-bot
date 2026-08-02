@@ -46,10 +46,16 @@ def _get_buttons_for_intent(intent: Intent) -> List[dict]:
 
 def _classify_intent_hybrid(text: str) -> Intent:
     """
-    Classify intent using keyword-based classification only.
-    LLM temporarily disabled to isolate timeout issues.
+    Classify intent using LLM with fallback to keyword-based classification.
+    LLM is tried first if configured, otherwise falls back to keywords.
     """
-    # Temporarily use only keyword-based classification
+    # Try LLM classification first
+    llm_intent = classify_intent_with_llm(text)
+    if llm_intent:
+        logger.info(f"LLM classified intent as: {llm_intent.value}")
+        return llm_intent
+
+    # Fallback to keyword-based classification
     keyword_intent = classify_intent(text)
     logger.info(f"Keyword-based classified intent as: {keyword_intent.value}")
     return keyword_intent

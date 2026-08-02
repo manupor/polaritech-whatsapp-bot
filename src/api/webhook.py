@@ -10,8 +10,9 @@ Production-safe:
   - Outbound failures are logged but never crash the server
 """
 
+import httpx
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from fastapi import APIRouter, Query, Request, Response
 
@@ -24,6 +25,7 @@ from src.services.persistence_service import persist_inbound, persist_outbound
 from src.services.response_service import handle_message
 from src.services.welcome_service import maybe_send_welcome
 from src.services.whatsapp_service import whatsapp_client
+from src.services.vision_service import vision_service
 from src.state.idempotency_store import idempotency_store
 
 logger = logging.getLogger(__name__)
@@ -172,9 +174,7 @@ async def _process_message(
         )
 
         # ── Welcome flow for new conversations ────────────────────────
-        # Temporarily disabled to isolate timeout issues
-        # welcome_sent = await maybe_send_welcome(sender, sender_name)
-        welcome_sent = False
+        welcome_sent = await maybe_send_welcome(sender, sender_name)
 
         # Persist inbound in background (don't block webhook)
         persist_inbound(incoming, wa_message_id=msg_id)
@@ -221,7 +221,7 @@ async def _process_message(
         persist_outbound(bot_response, wa_message_id=result.message_id or None)
         return
 
-    # ── Image messages — log metadata, reply with limitation notice ──
+    # ── Image messages — process with vision service ──
     if wa_msg.type == "image" and wa_msg.image:
         logger.info(
             "inbound_image  msg_id=%s  sender=%s  media_id=%s  mime=%s  caption=%s",
@@ -229,7 +229,28 @@ async def _process_message(
             wa_msg.image.id, wa_msg.image.mime_type,
             (wa_msg.image.caption or "")[:80],
         )
-        await whatsapp_client.send_text(sender, _UNSUPPORTED_TYPE_REPLY)
+
+        # Download image from WhatsApp Media API
+        image_url = await _get_whatsapp_media_url(wa_msg.image.id)
+        if image_url:
+            # Analyze image with vision service
+            analysis = await vision_service.extract_measurements(image_url)
+            if analysis:
+                # Create a text message with the analysis
+                reply_text = (
+                    f"Gracias por la imagen. He analizado la foto y detecté:\n\n"
+                    f"{analysis['description']}\n\n"
+                    f"¿Puedes confirmar si esta información es correcta o agregar más detalles?"
+                )
+                await whatsapp_client.send_text(sender, reply_text)
+                return
+
+        # Fallback if vision analysis fails
+        await whatsapp_client.send_text(
+            sender,
+            "Gracias por la imagen. Por el momento no puedo procesar visualmente la foto, "
+            "pero puedes describirme lo que necesitas y con gusto te ayudo."
+        )
         return
 
     # ── Document messages — log metadata, reply with limitation ──────
@@ -251,13 +272,53 @@ async def _process_message(
 
 
 def _is_human_takeover(phone_number: str) -> bool:
-    """Check DB for human takeover flag. Never raises."""
+    """Check if a phone number is under human takeover."""
+    db = get_db()
     try:
-        db = get_db()
-        try:
-            return repo.is_bot_paused(db, phone_number)
-        finally:
-            db.close()
-    except Exception:
-        logger.exception("takeover_check_failed  phone=%s", phone_number)
-        return False
+        return repo.is_bot_paused(db, phone_number)
+    finally:
+        db.close()
+
+
+async def _get_whatsapp_media_url(media_id: str) -> Optional[str]:
+    """
+    Get temporary download URL for WhatsApp media file.
+
+    Args:
+        media_id: WhatsApp media ID
+
+    Returns:
+        Temporary URL for downloading the media, or None if failed
+    """
+    if not settings.whatsapp_access_token:
+        logger.warning("WHATSAPP_ACCESS_TOKEN not set — cannot download media")
+        return None
+
+    media_url = f"https://graph.facebook.com/{settings.meta_api_version}/{media_id}"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                media_url,
+                headers={"Authorization": f"Bearer {settings.whatsapp_access_token}"}
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                url = data.get("url")
+                if url:
+                    logger.info("whatsapp_media_url_retrieved  media_id=%s", media_id)
+                    return url
+                else:
+                    logger.warning("whatsapp_media_no_url  media_id=%s", media_id)
+                    return None
+            else:
+                logger.error(
+                    "whatsapp_media_failed  status=%d  media_id=%s",
+                    response.status_code, media_id
+                )
+                return None
+
+    except Exception as e:
+        logger.exception("whatsapp_media_exception  media_id=%s  error=%s", media_id, str(e))
+        return None
