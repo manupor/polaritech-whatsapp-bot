@@ -221,7 +221,7 @@ async def _process_message(
         persist_outbound(bot_response, wa_message_id=result.message_id or None)
         return
 
-    # ── Image messages — temporarily disabled vision service ──
+    # ── Image messages — process with vision service ──
     if wa_msg.type == "image" and wa_msg.image:
         logger.info(
             "inbound_image  msg_id=%s  sender=%s  media_id=%s  mime=%s  caption=%s",
@@ -230,12 +230,36 @@ async def _process_message(
             (wa_msg.image.caption or "")[:80],
         )
 
-        # Temporarily disabled due to WhatsApp API 403 and OpenAI API 400 errors
-        # User needs to verify API keys and permissions
+        # Download image from WhatsApp Media API
+        logger.info("vision_step1_get_media_url  media_id=%s", wa_msg.image.id)
+        image_url = await _get_whatsapp_media_url(wa_msg.image.id)
+        if image_url:
+            logger.info("vision_step2_url_obtained  url=%s", image_url[:100])
+            # Analyze image with vision service (download + base64)
+            analysis = await vision_service.extract_measurements(
+                image_url, access_token=settings.whatsapp_access_token
+            )
+            if analysis:
+                logger.info("vision_step3_analysis_success  description=%s", analysis['description'][:100])
+                # Create a text message with the analysis
+                reply_text = (
+                    f"Gracias por la imagen. He analizado la foto y detecté:\n\n"
+                    f"{analysis['description']}\n\n"
+                    f"¿Puedes confirmar si esta información es correcta o agregar más detalles?"
+                )
+                await whatsapp_client.send_text(sender, reply_text)
+                return
+            else:
+                logger.warning("vision_step3_analysis_failed  vision_service returned None")
+        else:
+            logger.warning("vision_step2_url_failed  could not get media URL")
+
+        # Fallback if vision analysis fails
+        logger.info("vision_fallback  sending manual request message")
         await whatsapp_client.send_text(
             sender,
-            "Gracias por la imagen. Por el momento el procesamiento de imágenes está deshabilitado temporalmente. "
-            "Por favor, describe lo que necesitas en texto y con gusto te ayudo."
+            "Gracias por la imagen. Por el momento no puedo procesar visualmente la foto, "
+            "pero puedes describirme lo que necesitas y con gusto te ayudo."
         )
         return
 
