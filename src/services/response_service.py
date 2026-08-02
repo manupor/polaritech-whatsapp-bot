@@ -259,7 +259,8 @@ def _has_explicit_flow_change(text: str) -> Optional[Intent]:
     # Visit requests - only explicit visit requests
     visit_phrases = [
         "visita tecnica", "visita técnica", "agendar visita", "programar visita",
-        "necesito visita", "quiero visita"
+        "necesito visita", "quiero visita", "quiero que vengan", "pueden venir a ver",
+        "necesito que revisen en sitio", "quiero que revisen en sitio"
     ]
     if any(phrase in t for phrase in visit_phrases):
         return Intent.TECHNICAL_VISIT
@@ -519,7 +520,11 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
             parts.append("Gracias por la información.")
     
     if flow.no_measurements:
-        parts.append(TEMPLATES["quote_no_measurements"])
+        # Use appropriate template based on whether user has photos
+        if flow.collected.get("fotografias") == "missing":
+            parts.append(TEMPLATES["quote_no_measurements_no_photos"])
+        else:
+            parts.append(TEMPLATES["quote_no_measurements"])
     
     # Ask only for missing fields
     missing = flow.quote_missing()
@@ -867,25 +872,24 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
         )
         return _handle_button_click(phone, button_id)
     
-    # Priority 3.75: Check for explicit flow change requests (bypass active flow)
-    flow_change_intent = _has_explicit_flow_change(text)
-    if flow_change_intent:
-        logger.info(
-            "explicit_flow_change  phone=%s  from_flow=%s  to_intent=%s",
-            phone, current_flow.flow_type or 'idle', flow_change_intent.value,
-        )
-        # Clear current flow and handle the new intent
-        conversation_store.clear_flow(phone)
-        if flow_change_intent == Intent.PRODUCT_INFO:
-            return _handle_product_info(phone, text)
-        elif flow_change_intent == Intent.QUOTE_REQUEST:
-            return _handle_quote(phone, text)
-        elif flow_change_intent == Intent.TECHNICAL_VISIT:
-            return _handle_technical_visit(phone, text)
-    
     # Priority 4: Active flow data collection
     if current_flow.flow_type == "quote":
-        # Short-circuit: if message has quote semantics, handle directly without LLM classification
+        # Priority 4.1: Check for explicit flow change requests FIRST (before quote short-circuit)
+        flow_change_intent = _has_explicit_flow_change(text)
+        if flow_change_intent:
+            logger.info(
+                "explicit_flow_change_in_quote  phone=%s  to_intent=%s",
+                phone, flow_change_intent.value,
+            )
+            conversation_store.clear_flow(phone)
+            if flow_change_intent == Intent.PRODUCT_INFO:
+                return _handle_product_info(phone, text)
+            elif flow_change_intent == Intent.QUOTE_REQUEST:
+                return _handle_quote(phone, text)
+            elif flow_change_intent == Intent.TECHNICAL_VISIT:
+                return _handle_technical_visit(phone, text)
+        
+        # Priority 4.2: Short-circuit: if message has quote semantics, handle directly without LLM classification
         if _has_quote_semantics(text):
             extracted = _extract_fields_from_text(text)
             if _detect_no_measurements(text):

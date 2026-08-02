@@ -324,6 +324,11 @@ TEMPLATES: Dict[str, str] = {
         "estimación preliminar.\n"
         "Las medidas finales se confirman el día de la instalación."
     ),
+    "quote_no_measurements_no_photos": (
+        "¡Sin problema! Con su ubicación podemos hacer una "
+        "estimación preliminar.\n"
+        "Las medidas finales se confirman el día de la instalación."
+    ),
     "quote_handoff": (
         "¡Gracias por la información! Con estos datos un asesor de Polaritech "
         "preparará su cotización formal y se comunicará con usted.\n\n"
