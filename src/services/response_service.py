@@ -18,8 +18,13 @@ import re
 from typing import List, Optional
 
 from src.core.constants import (
+    BUTTONS_FOLLOWUP_PROMPT,
     FIELD_LABELS,
+    INTENT_BUTTONS,
+    INTERACTIVE_BODY_LIMIT,
     Intent,
+    INTENT_KEYWORDS,
+    NEED_TO_PRODUCT,
     PENDING_PHRASE,
     TEMPLATES,
 )
@@ -30,6 +35,11 @@ from src.services.intent_service import classify_intent
 from src.state.conversation_store import FlowState, conversation_store
 
 logger = logging.getLogger(__name__)
+
+
+def _get_buttons_for_intent(intent: Intent) -> List[dict]:
+    """Return quick-reply buttons for a given intent."""
+    return INTENT_BUTTONS.get(intent, [])
 
 
 # ── Field extraction helpers ─────────────────────────────────────────────────
@@ -114,7 +124,10 @@ def _detect_night_privacy(text: str) -> bool:
 def _handle_greeting(phone: str) -> BotResponse:
     reply = TEMPLATES["greeting"]
     conversation_store.add_turn(phone, "bot", reply)
-    return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.GREETING)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.GREETING,
+        buttons=_get_buttons_for_intent(Intent.GREETING),
+    )
 
 
 def _handle_faq(phone: str, text: str) -> Optional[BotResponse]:
@@ -122,7 +135,10 @@ def _handle_faq(phone: str, text: str) -> Optional[BotResponse]:
     answer = find_answer(text)
     if answer:
         conversation_store.add_turn(phone, "bot", answer)
-        return BotResponse(phone_number=phone, reply_text=answer, intent=Intent.FAQ)
+        return BotResponse(
+            phone_number=phone, reply_text=answer, intent=Intent.FAQ,
+            buttons=_get_buttons_for_intent(Intent.FAQ),
+        )
     return None
 
 
@@ -149,18 +165,27 @@ def _handle_product_info(phone: str, text: str) -> BotResponse:
     if _detect_night_privacy(text):
         reply = TEMPLATES["night_privacy"]
         conversation_store.add_turn(phone, "bot", reply)
-        return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO)
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO,
+            buttons=_get_buttons_for_intent(Intent.PRODUCT_INFO),
+        )
 
     # Generic "info de productos" → show full catalog
     if _is_generic_product_request(text):
         reply = TEMPLATES["product_catalog"]
         conversation_store.add_turn(phone, "bot", reply)
-        return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO)
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO,
+            buttons=_get_buttons_for_intent(Intent.PRODUCT_INFO),
+        )
 
     answer = find_answer(text)
     reply = answer if answer else TEMPLATES["fallback_no_match"].format(pending=PENDING_PHRASE)
     conversation_store.add_turn(phone, "bot", reply)
-    return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO,
+        buttons=_get_buttons_for_intent(Intent.PRODUCT_INFO),
+    )
 
 
 def _handle_quote(phone: str, text: str) -> BotResponse:
@@ -203,6 +228,7 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
         return BotResponse(
             phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST,
             escalated=True, escalation=escalation,
+            buttons=_get_buttons_for_intent(Intent.QUOTE_REQUEST),
         )
 
     # Ask only for missing fields
@@ -216,7 +242,10 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
     reply = "\n\n".join(parts)
 
     conversation_store.add_turn(phone, "bot", reply)
-    return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.QUOTE_REQUEST,
+        buttons=_get_buttons_for_intent(Intent.QUOTE_REQUEST),
+    )
 
 
 def _handle_warranty(phone: str, text: str) -> BotResponse:
@@ -253,6 +282,7 @@ def _handle_warranty(phone: str, text: str) -> BotResponse:
     return BotResponse(
         phone_number=phone, reply_text=reply, intent=Intent.WARRANTY_CLAIM,
         escalated=True, escalation=escalation,
+        buttons=_get_buttons_for_intent(Intent.WARRANTY_CLAIM),
     )
 
 
@@ -271,6 +301,7 @@ def _handle_technical_visit(phone: str, text: str) -> BotResponse:
     return BotResponse(
         phone_number=phone, reply_text=reply, intent=Intent.TECHNICAL_VISIT,
         escalated=True, escalation=escalation,
+        buttons=_get_buttons_for_intent(Intent.TECHNICAL_VISIT),
     )
 
 
@@ -284,13 +315,19 @@ def _handle_competitor(phone: str, text: str) -> BotResponse:
         reply = TEMPLATES["competitor_cheaper"]
 
     conversation_store.add_turn(phone, "bot", reply)
-    return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.COMPETITOR)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.COMPETITOR,
+        buttons=_get_buttons_for_intent(Intent.COMPETITOR),
+    )
 
 
 def _handle_discount(phone: str) -> BotResponse:
     reply = TEMPLATES["discount"]
     conversation_store.add_turn(phone, "bot", reply)
-    return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.DISCOUNT)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.DISCOUNT,
+        buttons=_get_buttons_for_intent(Intent.DISCOUNT),
+    )
 
 
 def _handle_pending_query(phone: str, text: str) -> BotResponse:
@@ -307,6 +344,7 @@ def _handle_pending_query(phone: str, text: str) -> BotResponse:
     return BotResponse(
         phone_number=phone, reply_text=reply, intent=Intent.PENDING_QUERY,
         escalated=True, escalation=escalation,
+        buttons=_get_buttons_for_intent(Intent.PENDING_QUERY),
     )
 
 
@@ -321,6 +359,7 @@ def _handle_explicit_escalation(phone: str) -> BotResponse:
     return BotResponse(
         phone_number=phone, reply_text=reply, intent=Intent.ESCALATE,
         escalated=True, escalation=escalation,
+        buttons=_get_buttons_for_intent(Intent.ESCALATE),
     )
 
 
@@ -329,11 +368,17 @@ def _handle_unknown(phone: str, text: str) -> BotResponse:
     kb_answer = find_answer(text)
     if kb_answer:
         conversation_store.add_turn(phone, "bot", kb_answer)
-        return BotResponse(phone_number=phone, reply_text=kb_answer, intent=Intent.FAQ)
+        return BotResponse(
+            phone_number=phone, reply_text=kb_answer, intent=Intent.FAQ,
+            buttons=_get_buttons_for_intent(Intent.FAQ),
+        )
 
     reply = TEMPLATES["unknown"]
     conversation_store.add_turn(phone, "bot", reply)
-    return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.UNKNOWN)
+    return BotResponse(
+        phone_number=phone, reply_text=reply, intent=Intent.UNKNOWN,
+        buttons=_get_buttons_for_intent(Intent.UNKNOWN),
+    )
 
 
 # ── Main orchestrator ────────────────────────────────────────────────────────
@@ -387,7 +432,10 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
     if intent == Intent.APPOINTMENT:
         reply = TEMPLATES["appointment"]
         conversation_store.add_turn(phone, "bot", reply)
-        return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.APPOINTMENT)
+        return BotResponse(
+            phone_number=phone, reply_text=reply, intent=Intent.APPOINTMENT,
+            buttons=_get_buttons_for_intent(Intent.APPOINTMENT),
+        )
 
     if intent == Intent.PRODUCT_INFO:
         # Try FAQ first for product questions
