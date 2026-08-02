@@ -69,6 +69,10 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
     # Send image separately if configured (after the text to avoid disorder)
     image_url = settings.whatsapp_welcome_image_url
     media_id = settings.whatsapp_welcome_image_id
+    logger.info(
+        "welcome_image_check  phone=%s  image_url=%s  media_id=%s",
+        phone_number, image_url or "", media_id or "",
+    )
     if image_url or media_id:
         img_result = await whatsapp_client.send_image(
             phone_number,
@@ -76,8 +80,14 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
             media_id=media_id,
             caption="",
         )
+        logger.info(
+            "welcome_image_result  phone=%s  success=%s  status=%s  error=%s",
+            phone_number, img_result.success, img_result.status_code, img_result.error or "",
+        )
         # Persist image in background (don't block)
         _persist_welcome_image(phone_number, img_result)
+    else:
+        logger.info("welcome_image_skipped  phone=%s  reason=no_url_or_media_id", phone_number)
 
     return True
 
