@@ -6,8 +6,10 @@ __pycache__/
 dist/
 build/
 
-# Environment (keep .env.example, .env.staging, .env.production as reference)
+# Environment — never commit real credentials (.env.example is the reference)
 .env
+.env.*
+!.env.example
 
 # SQLite database
 *.db
