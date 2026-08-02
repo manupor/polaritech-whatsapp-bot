@@ -259,4 +259,19 @@ TEMPLATES: Dict[str, str] = {
         "• *Sand Blasting* — acabado tipo vidrio esmerilado\n"
         "• Cortinas o persianas como complemento"
     ),
+    "product_catalog": (
+        "En Polaritech trabajamos con las siguientes líneas de películas arquitectónicas:\n\n"
+        "☀️ *Nano Cerámica* — Alto rendimiento térmico, privacidad de día, "
+        "excelente visibilidad hacia el exterior.\n\n"
+        "💰 *Económica* — Control solar básico a un precio accesible. "
+        "Reducción moderada de calor y privacidad durante el día.\n\n"
+        "🪞 *Silver Espejo* — Efecto espejo en el exterior, privacidad de día "
+        "y estilo moderno.\n\n"
+        "🛡️ *Seguridad* — Refuerza el vidrio, mantiene fragmentos unidos ante impacto. "
+        "Lámina transparente de 4 micras.\n\n"
+        "🔲 *Sand Blasting (Esmerilado)* — Privacidad total en ambos sentidos "
+        "sin perder entrada de luz. Acabado decorativo.\n\n"
+        "¿Sobre cuál le gustaría más información? O si prefiere, "
+        "puedo ayudarle a elegir según su necesidad (calor, privacidad, seguridad, decoración)."
+    ),
 }

@@ -126,10 +126,34 @@ def _handle_faq(phone: str, text: str) -> Optional[BotResponse]:
     return None
 
 
+def _is_generic_product_request(text: str) -> bool:
+    """Detect vague 'info de productos' requests that should show the full catalog."""
+    t = text.lower().strip()
+    generic_phrases = [
+        "información de productos",
+        "info de productos",
+        "información sobre productos",
+        "productos",
+        "que productos tienen",
+        "qué productos tienen",
+        "que ofrecen",
+        "qué ofrecen",
+        "catálogo",
+        "catalogo",
+    ]
+    return any(phrase in t for phrase in generic_phrases)
+
+
 def _handle_product_info(phone: str, text: str) -> BotResponse:
     # Night privacy special case
     if _detect_night_privacy(text):
         reply = TEMPLATES["night_privacy"]
+        conversation_store.add_turn(phone, "bot", reply)
+        return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO)
+
+    # Generic "info de productos" → show full catalog
+    if _is_generic_product_request(text):
+        reply = TEMPLATES["product_catalog"]
         conversation_store.add_turn(phone, "bot", reply)
         return BotResponse(phone_number=phone, reply_text=reply, intent=Intent.PRODUCT_INFO)
 

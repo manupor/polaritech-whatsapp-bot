@@ -158,6 +158,43 @@ def load_faq_json() -> KnowledgeBase:
 _HEADING_RE = re.compile(r"^#{1,3}\s+(.+)$", re.MULTILINE)
 
 
+# Headings that contain internal instructions (not user-facing answers)
+_INTERNAL_HEADINGS = frozenset({
+    "reglas del chatbot",
+    "base de conocimiento para chatbot",
+})
+
+# Body content that starts with an instruction pattern (not a user-facing answer)
+_INSTRUCTION_PREFIXES = (
+    "no inventar",
+    "escalar",
+    "responder con respeto",
+    "explicar que",
+    "revisar si existe",
+    "aclarar que",
+    "indicar que",
+)
+
+
+def _is_internal_section(heading: str, body: str) -> bool:
+    """Return True if a section contains bot instructions, not user-facing content."""
+    h_lower = heading.lower()
+    if any(internal in h_lower for internal in _INTERNAL_HEADINGS):
+        return True
+    # Numbered section headers like "9. Reglas del chatbot"
+    if "reglas" in h_lower and "chatbot" in h_lower:
+        return True
+    # Body that starts with an instruction verb
+    b_lower = body.lower().strip()
+    if any(b_lower.startswith(prefix) for prefix in _INSTRUCTION_PREFIXES):
+        return True
+    # Lists of rules (body is only bullet points starting with "- ")
+    lines = [l.strip() for l in body.split("\n") if l.strip()]
+    if lines and all(l.startswith("- ") for l in lines):
+        return True
+    return False
+
+
 def load_md_articles() -> List[KBArticle]:
     """Parse the markdown file into section-based KBArticle objects."""
     articles: List[KBArticle] = []
@@ -174,7 +211,7 @@ def load_md_articles() -> List[KBArticle]:
     while i < len(sections) - 1:
         heading = sections[i].strip()
         body = sections[i + 1].strip()
-        if body:
+        if body and not _is_internal_section(heading, body):
             keywords = [w.lower() for w in re.findall(r"[A-Za-zÀ-ÿ]{4,}", heading)]
             articles.append(KBArticle(topic=heading, content=body, keywords=keywords))
         i += 2
