@@ -142,13 +142,25 @@ _NO_MEASUREMENT_PHRASES = [
     "no sé las medidas", "no se las medidas",
 ]
 
+_NO_PHOTOS_PHRASES = [
+    "no tengo fotos", "sin fotos", "no tengo fotografías", "sin fotografías",
+    "no tengo fotografias", "sin fotografias",
+]
+
+
+def _detect_no_photos(text: str) -> bool:
+    """Detect if user indicates they don't have photos."""
+    t = text.lower()
+    return any(phrase in t for phrase in _NO_PHOTOS_PHRASES)
+
 
 def _detect_main_need(text: str) -> Optional[str]:
     """Detect main need from free text with various forms.
-    Returns: 'calor', 'privacidad', 'seguridad', 'decoracion' or None."""
+    Returns: 'calor', 'privacidad', 'seguridad', 'decoracion' or None.
+    If multiple needs are present, returns the first one found."""
     t = normalize_text(text)
     
-    # Patterns for each need
+    # Patterns for each need - check in priority order
     if "calor" in t:
         return "calor"
     elif "privacidad" in t:
@@ -159,6 +171,24 @@ def _detect_main_need(text: str) -> Optional[str]:
         return "decoracion"
     
     return None
+
+
+def _detect_multiple_needs(text: str) -> List[str]:
+    """Detect multiple needs from free text.
+    Returns list of needs found: ['calor', 'privacidad', 'seguridad', 'decoracion']."""
+    t = normalize_text(text)
+    needs = []
+    
+    if "calor" in t:
+        needs.append("calor")
+    if "privacidad" in t:
+        needs.append("privacidad")
+    if "seguridad" in t:
+        needs.append("seguridad")
+    if "decoracion" in t or "decoracion" in t:
+        needs.append("decoracion")
+    
+    return needs
 
 
 def _get_need_recommendation(need: str) -> str:
@@ -172,20 +202,50 @@ def _get_need_recommendation(need: str) -> str:
     return recommendations.get(need, "")
 
 
+def _has_quote_semantics(text: str) -> bool:
+    """Check if text contains quote-related semantics.
+    Returns True if text contains: province/zone, no photos, no measurements,
+    measurements (2x1, 3 m2, 4 ventanas), or needs (calor, privacidad, seguridad, decoracion)."""
+    t = text.lower()
+    
+    # Check for province
+    for prov in _PROVINCES:
+        if prov in t:
+            return True
+    
+    # Check for no photos / no measurements
+    if _detect_no_photos(text) or _detect_no_measurements(text):
+        return True
+    
+    # Check for measurements patterns
+    if re.search(r"(\d+)\s*ventanas?", t):
+        return True
+    if re.search(r"(\d+(?:[.,]\d+)?)\s*m[²2]", t):
+        return True
+    if re.search(r"(\d+(?:[.,]\d+)?)\s*[x×X]\s*(\d+(?:[.,]\d+)?)", t):
+        return True
+    
+    # Check for needs
+    if any(k in t for k in ["calor", "privacidad", "seguridad", "decoracion", "decoración"]):
+        return True
+    
+    return False
+
+
 def _extract_fields_from_text(text: str) -> Dict[str, str]:
     """Best-effort extraction of quote/warranty/visit fields from free text."""
     t = text.lower()
     fields: dict = {}
 
-    # Province
+    # Province - handle "San José, Curridabat" and "Curridabat, San José" patterns
     for prov in _PROVINCES:
         if prov in t:
             fields["provincia"] = prov.title()
             break
 
     # Zone / neighbourhood - more flexible patterns
-    # Try patterns: "en <place>", "zona de <place>", "de <place>"
-    zone_match = re.search(r"(?:en|zona\s+de?|de)\s+([A-ZÁÉÍÓÚa-záéíóúñ]{3,}(?:\s+[A-ZÁÉÍÓÚa-záéíóúñ]+)*)", text)
+    # Try patterns: "en <place>", "zona de <place>", "de <place>", ", <place>"
+    zone_match = re.search(r"(?:en|zona\s+de?|de|,)\s+([A-ZÁÉÍÓÚa-záéíóúñ]{3,}(?:\s+[A-ZÁÉÍÓÚa-záéíóúñ]+)*)", text)
     if zone_match:
         zone_candidate = zone_match.group(1).strip()
         # Don't capture if it's just a province name without context
@@ -337,10 +397,20 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
         flow.no_measurements = True
         extracted.pop("medidas", None)
 
-    # Detect main need from free text and generate contextual recommendation
-    main_need = _detect_main_need(text)
-    if main_need:
-        extracted["necesidad"] = main_need
+    # Detect "no photos" intent
+    if _detect_no_photos(text):
+        extracted["fotografias"] = "missing"
+
+    # Detect needs - prioritize multiple needs over single need
+    multiple_needs = _detect_multiple_needs(text)
+    if multiple_needs:
+        # Save as combined string
+        extracted["necesidad"] = ", ".join(multiple_needs)
+    else:
+        # Fall back to single need detection
+        main_need = _detect_main_need(text)
+        if main_need:
+            extracted["necesidad"] = main_need
 
     flow.merge(extracted)
 
@@ -386,13 +456,23 @@ def _handle_quote(phone: str, text: str) -> BotResponse:
     # Build response with contextual recommendation if need was just provided
     parts = []
     
-    # Add contextual recommendation if need was detected in this message
-    if main_need:
-        recommendation = _get_need_recommendation(main_need)
-        if recommendation:
-            parts.append(recommendation)
+    # Re-detect needs for recommendation generation
+    multiple_needs = _detect_multiple_needs(text)
+    if multiple_needs:
+        # Handle multiple needs with combined recommendations
+        for need in multiple_needs:
+            recommendation = _get_need_recommendation(need)
+            if recommendation:
+                parts.append(recommendation)
     else:
-        parts.append("Gracias por la información.")
+        # Fall back to single need
+        main_need = _detect_main_need(text)
+        if main_need:
+            recommendation = _get_need_recommendation(main_need)
+            if recommendation:
+                parts.append(recommendation)
+        else:
+            parts.append("Gracias por la información.")
     
     if flow.no_measurements:
         parts.append(TEMPLATES["quote_no_measurements"])
@@ -745,9 +825,33 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
     
     # Priority 4: Active flow data collection
     if current_flow.flow_type == "quote":
-        # If the user isn't switching to a completely different intent, treat as
-        # continued quote data
+        # Short-circuit: if message has quote semantics, handle directly without LLM classification
+        if _has_quote_semantics(text):
+            extracted = _extract_fields_from_text(text)
+            if _detect_no_measurements(text):
+                current_flow.no_measurements = True
+            if _detect_no_photos(text):
+                extracted["fotografias"] = "missing"
+            if extracted or _detect_no_measurements(text) or _detect_no_photos(text):
+                logger.info(
+                    "quote_short_circuit  phone=%s  extracted=%d  no_measurements=%s  no_photos=%s",
+                    phone, len(extracted), current_flow.no_measurements, _detect_no_photos(text),
+                )
+                return _handle_quote(phone, text)
+        
+        # Otherwise, proceed with intent resolution
         intent = _resolve_intent_unified(text, button_id, current_flow.flow_type)
+        # Prevent technical_visit promotion from active quote flow with common text
+        if intent == Intent.TECHNICAL_VISIT:
+            # Only allow technical_visit if explicit visit language is present
+            t_lower = text.lower()
+            visit_keywords = ["visita técnica", "visita tecnica", "agendar visita", "programar visita",
+                           "inspección", "inspeccion", "revisar el lugar", "ir a ver",
+                           "necesito que revisen en sitio", "quiero programar visita", "pueden venir a ver"]
+            if not any(kw in t_lower for kw in visit_keywords):
+                # Not explicit visit language, treat as quote data
+                intent = Intent.QUOTE_REQUEST
+        
         if intent in (Intent.UNKNOWN, Intent.QUOTE_REQUEST, Intent.PRODUCT_INFO):
             extracted = _extract_fields_from_text(text)
             if _detect_no_measurements(text):

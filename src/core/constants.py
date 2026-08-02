@@ -172,9 +172,11 @@ INTENT_KEYWORDS: Dict[Intent, List[str]] = {
     ],
     Intent.TECHNICAL_VISIT: [
         "visita técnica", "visita tecnica",
+        "agendar visita", "programar visita",
         "inspección", "inspeccion",
         "revisar el lugar", "ir a ver",
-        "technical visit", "inspection",
+        "necesito que revisen en sitio", "quiero programar visita",
+        "pueden venir a ver", "technical visit", "inspection",
     ],
     Intent.COMPETITOR: [
         "3m", "llumar", "suntek", "competencia",
