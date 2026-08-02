@@ -14,8 +14,13 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = ""
     meta_api_version: str = "v21.0"
 
-    # OpenAI (future use)
+    # LLM Provider (openai or anthropic)
+    llm_provider: str = "openai"
     openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    llm_model: str = "gpt-4o-mini"  # or claude-3-haiku for Anthropic
+    llm_temperature: float = 0.3  # Low temperature for consistent responses
+    llm_max_tokens: int = 500
 
     # App
     app_env: str = "development"

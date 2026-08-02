@@ -32,6 +32,8 @@ from src.schemas.chatbot import BotResponse, EscalationPayload, IncomingMessage
 from src.services.escalation_service import build_escalation_payload, should_escalate
 from src.services.faq_service import find_answer
 from src.services.intent_service import classify_intent
+from src.services.llm_intent_service import classify_intent_with_llm
+from src.services.llm_rag_service import rewrite_response_with_llm
 from src.state.conversation_store import FlowState, conversation_store
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,23 @@ logger = logging.getLogger(__name__)
 def _get_buttons_for_intent(intent: Intent) -> List[dict]:
     """Return quick-reply buttons for a given intent."""
     return INTENT_BUTTONS.get(intent, [])
+
+
+def _classify_intent_hybrid(text: str) -> Intent:
+    """
+    Classify intent using LLM with fallback to keyword-based classification.
+    LLM is tried first if configured, otherwise falls back to keywords.
+    """
+    # Try LLM classification first
+    llm_intent = classify_intent_with_llm(text)
+    if llm_intent:
+        logger.info(f"LLM classified intent as: {llm_intent.value}")
+        return llm_intent
+
+    # Fallback to keyword-based classification
+    keyword_intent = classify_intent(text)
+    logger.info(f"Keyword-based classified intent as: {keyword_intent.value}")
+    return keyword_intent
 
 
 # ── Field extraction helpers ─────────────────────────────────────────────────
@@ -392,7 +411,7 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
     # Check if user is in an active quote flow and sends data (not a new intent)
     current_flow = conversation_store.get_flow(phone)
     if current_flow.flow_type == "quote":
-        intent = classify_intent(text)
+        intent = _classify_intent_hybrid(text)
         # If the user isn't switching to a completely different intent, treat as
         # continued quote data
         if intent in (Intent.UNKNOWN, Intent.QUOTE_REQUEST, Intent.PRODUCT_INFO):
@@ -402,7 +421,7 @@ def handle_message(msg: IncomingMessage) -> BotResponse:
             if extracted or _detect_no_measurements(text):
                 return _handle_quote(phone, text)
 
-    intent = classify_intent(text)
+    intent = _classify_intent_hybrid(text)
     logger.info("Intent for %s: %s", phone, intent)
 
     if intent == Intent.ESCALATE:
