@@ -85,10 +85,33 @@ def _extract_fields_from_text(text: str) -> dict:
             fields["provincia"] = prov.title()
             break
 
-    # Zone / neighbourhood (look for common patterns: "en <place>", "zona de <place>")
+    # Zone / neighbourhood - more flexible patterns
+    # Try patterns: "en <place>", "zona de <place>", "de <place>"
     zone_match = re.search(r"(?:en|zona\s+de?|de)\s+([A-ZÁÉÍÓÚa-záéíóúñ]{3,}(?:\s+[A-ZÁÉÍÓÚa-záéíóúñ]+)*)", text)
-    if zone_match and zone_match.group(1).lower() not in {p.split()[-1] for p in _PROVINCES}:
-        fields["zona"] = zone_match.group(1).strip()
+    if zone_match:
+        zone_candidate = zone_match.group(1).strip()
+        # Don't capture if it's just a province name without context
+        if zone_candidate.lower() not in {p.lower() for p in _PROVINCES}:
+            fields["zona"] = zone_candidate
+    else:
+        # Fallback: numbered lists like "1- privacidad 2- San José"
+        numbered_items = re.findall(r"(?:\d+[\.\-]\s*)([A-ZÁÉÍÓÚa-záéíóúñ\s]+)", text)
+        for item in numbered_items:
+            item_clean = item.strip()
+            item_lower = item_clean.lower()
+            # Skip if already captured as need
+            if any(k in item_lower for k in ["privacidad", "calor", "seguridad", "decoración"]):
+                continue
+            # If it's a place name (3+ chars), capture as zone
+            # Even if it's a province name (San José can be both province and zone)
+            if len(item_clean) >= 3 and item_clean not in fields.values():
+                fields["zona"] = item_clean
+                break
+
+    # If no zone found but province is mentioned, use province as zone
+    # (flexible for Costa Rica where San José is both province and cantón)
+    if "zona" not in fields and "provincia" in fields:
+        fields["zona"] = fields["provincia"]
 
     # Number of windows / measurements
     ventanas_match = re.search(r"(\d+)\s*ventanas?", t)
