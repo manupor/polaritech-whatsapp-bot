@@ -40,6 +40,19 @@ class Settings(BaseSettings):
     whatsapp_welcome_image_id: str = ""
     welcome_window_hours: float = 24.0
 
+    # Deployment / public URL (Vercel sets this automatically)
+    vercel_url: str = ""
+    app_url: str = ""
+
+    @property
+    def public_url(self) -> str:
+        """Return the public URL for this deployment."""
+        if self.app_url:
+            return self.app_url.rstrip("/")
+        if self.vercel_url:
+            return f"https://{self.vercel_url.rstrip('/')}"
+        return ""
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"

@@ -37,6 +37,35 @@ MENU_BUTTONS = [
 MENU_FOOTER = "O escriba asesor para hablar con un miembro del equipo."
 
 
+def _resolve_welcome_image_url() -> str:
+    """Return the image URL to send to Meta.
+
+    The configured WHATSAPP_WELCOME_IMAGE_URL is used if it looks reliable.
+    GitHub blob URLs (with ?raw=true or /blob/) are replaced by the bot's own
+    /welcome-image endpoint so Meta always gets a clean image/jpeg response.
+    """
+    configured = (settings.whatsapp_welcome_image_url or "").strip()
+
+    # If the user explicitly set a media ID, don't force an image URL.
+    if not configured and not settings.whatsapp_welcome_image_id:
+        return ""
+
+    # GitHub blob/html preview links are not reliable for Meta.
+    if configured and "github.com" in configured and ("/blob/" in configured or "?raw=true" in configured):
+        logger.warning("github_blob_url_detected  url=%s  switching_to_self_hosted", configured)
+        configured = ""
+
+    if configured:
+        return configured
+
+    # Fall back to the bot's own /welcome-image endpoint.
+    public_url = settings.public_url
+    if public_url:
+        return f"{public_url}/welcome-image"
+
+    return ""
+
+
 async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") -> bool:
     """
     Check if this is a new conversation and, if so, send welcome messages.
@@ -67,8 +96,8 @@ async def maybe_send_welcome(phone_number: str, sender_name: str = "Unknown") ->
     _persist_menu(phone_number, menu_result)
 
     # Send image separately if configured (after the text to avoid disorder)
-    image_url = settings.whatsapp_welcome_image_url
     media_id = settings.whatsapp_welcome_image_id
+    image_url = _resolve_welcome_image_url() if not media_id else ""
     logger.info(
         "welcome_image_check  phone=%s  image_url=%s  media_id=%s",
         phone_number, image_url or "", media_id or "",
