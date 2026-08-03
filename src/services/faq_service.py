@@ -121,6 +121,14 @@ def _check_brand_intents(query: str) -> Optional[str]:
             if alias in q_norm:
                 return intent_data["answer"]
     
+    # Fallback: any question that mentions "marca(s)" alongside a verb of offering/working
+    # should be treated as a general brand question, unless 3M was already matched above.
+    brand_verbs = ("trabajan", "manejan", "usan", "tienen", "ofrecen", "venden")
+    if ("marca" in q_norm or "marcas" in q_norm) and any(v in q_norm for v in brand_verbs):
+        # Do not let this catch explicit 3M queries that somehow slipped the alias list
+        if "3m" not in q_norm:
+            return BRAND_INTENTS["brand_general"]["answer"]
+    
     return None
 
 

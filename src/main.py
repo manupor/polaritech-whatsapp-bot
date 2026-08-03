@@ -1,7 +1,10 @@
 import logging
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 
 from src.api.dashboard import router as dashboard_router
 from src.api.ops import router as ops_router
@@ -53,3 +56,22 @@ app.include_router(dashboard_router)
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/welcome-image")
+async def welcome_image() -> FileResponse:
+    """Serve the welcome image from the bot's own domain.
+
+    This lets Meta fetch the image from the same deployment URL instead of
+    relying on an external host (e.g. GitHub raw), which can be rejected.
+    """
+    image_path = Path(__file__).resolve().parent.parent / "assets" / "welcome" / "Bienvenido.jpeg"
+    if not image_path.exists():
+        logger.error("welcome_image_not_found  path=%s", image_path)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Welcome image not found")
+    return FileResponse(
+        image_path,
+        media_type="image/jpeg",
+        filename="Bienvenido.jpeg",
+    )
